@@ -2,7 +2,7 @@
 title: winniexu.ca
 ---
 
-![](films/000045.JPG)
+![](films/jp_butt_snow_vend.jpg)
 
 i'm a computational scientist interested in **generative modeling and multimodal synthesis**, currently via **natural language understanding and large probabilistic models**. my goal is to understand the complexities of capable models (how they learn, why certain behaviors can/{-not} be elicited, when to trust their outputs) to scale up ai systems and ensure their alignment to real-world actors and feedback.
 
