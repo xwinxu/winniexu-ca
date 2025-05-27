@@ -1,7 +1,6 @@
 ---
 title: "KTO: Model Alignment as Prospect Theoretic Optimization"
 date: 2024-02-20
-tags: [alignment, llm, icml]
 ---
 
 ## KTO: Model Alignment as Prospect Theoretic Optimization
