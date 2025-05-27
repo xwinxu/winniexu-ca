@@ -22,6 +22,7 @@ export const sharedPageComponents: SharedLayout = {
 const left = [
   Component.PageTitle(),
   Component.MobileOnly(Component.Spacer()),
+  Component.Explorer(),
   Component.Flex({
     components: [
       {
