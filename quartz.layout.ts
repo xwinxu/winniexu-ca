@@ -19,61 +19,63 @@ export const sharedPageComponents: SharedLayout = {
   }),
 }
 
-const left = [
-  Component.PageTitle(),
-  Component.MobileOnly(Component.Spacer()),
-  Component.Explorer(),
-  Component.Flex({
-    components: [
-      {
-        Component: Component.Search(),
-        grow: true,
-      },
-      { Component: Component.Darkmode() },
-    ],
-  }),
-  Component.DesktopOnly(
-    Component.RecentNotes({
-      title: "Research",
-      limit: 3,
-      filter: (f) => (f.slug ? (f.slug.startsWith("research/") && f.slug !== "research/index" && !f.frontmatter?.noindex) : false),
-      linkToMore: "research/" as SimpleSlug,
-    }),
-  ),
-  Component.DesktopOnly(
-    Component.RecentNotes({
-      title: "Adventure",
-      limit: 3,
-      filter: (f) => (f.slug ? (f.slug.startsWith("adventure/") && f.slug !== "adventure/index" && !f.frontmatter?.noindex) : false),
-      linkToMore: "adventure/" as SimpleSlug,
-    }),
-  ),
-  Component.DesktopOnly(
-    Component.RecentNotes({
-      title: "Crafts",
-      limit: 3,
-      filter: (f) => (f.slug ? (f.slug.startsWith("crafts/") && f.slug !== "crafts/index" && !f.frontmatter?.noindex) : false),
-      linkToMore: "crafts/" as SimpleSlug,
-    }),
-  ),
-  Component.DesktopOnly(
-    Component.RecentNotes({
-      title: "Writing",
-      limit: 3,
-      filter: (f) => (f.slug ? (f.slug.startsWith("writing/") && f.slug !== "writing/index" && !f.frontmatter?.noindex) : false),
-      linkToMore: "writing/" as SimpleSlug,
-    }),
-  ),
-]
-
-// components for pages that display a single page (e.g. a single note)
 export const defaultContentPageLayout: PageLayout = {
   beforeBody: [
+    Component.ConditionalRender({
+      component: Component.Breadcrumbs(),
+      condition: (page: any) => page.fileData.slug !== "index",
+    }),
     Component.ArticleTitle(),
     Component.ContentMeta(),
     Component.TagList(),
   ],
-  left,
+  left: [
+    Component.PageTitle(),
+    Component.MobileOnly(Component.Spacer()),
+    Component.Flex({
+      components: [
+        {
+          Component: Component.Search(),
+          grow: true,
+        },
+        { Component: Component.Darkmode() },
+        { Component: Component.ReaderMode() },
+      ],
+    }),
+    Component.MobileOnly(Component.Explorer()),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Research",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("research/") && f.slug !== "research/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "research/" as SimpleSlug,
+      }),
+    ),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Adventure",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("adventure/") && f.slug !== "adventure/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "adventure/" as SimpleSlug,
+      }),
+    ),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Crafts",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("crafts/") && f.slug !== "crafts/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "crafts/" as SimpleSlug,
+      }),
+    ),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Writing",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("writing/") && f.slug !== "writing/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "writing/" as SimpleSlug,
+      }),
+    ),
+  ],
   right: [
     Component.Graph({
       localGraph: {
@@ -88,9 +90,57 @@ export const defaultContentPageLayout: PageLayout = {
   ],
 }
 
-// components for pages that display lists of pages  (e.g. tags or folders)
 export const defaultListPageLayout: PageLayout = {
-  beforeBody: [Component.ArticleTitle(), Component.ContentMeta()],
-  left,
+  beforeBody: [
+    Component.Breadcrumbs(),
+    Component.ArticleTitle(),
+    Component.ContentMeta()
+  ],
+  left: [
+    Component.PageTitle(),
+    Component.MobileOnly(Component.Spacer()),
+    Component.Flex({
+      components: [
+        {
+          Component: Component.Search(),
+          grow: true,
+        },
+        { Component: Component.Darkmode() },
+      ],
+    }),
+    Component.MobileOnly(Component.Explorer()),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Research",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("research/") && f.slug !== "research/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "research/" as SimpleSlug,
+      }),
+    ),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Adventure",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("adventure/") && f.slug !== "adventure/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "adventure/" as SimpleSlug,
+      }),
+    ),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Crafts",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("crafts/") && f.slug !== "crafts/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "crafts/" as SimpleSlug,
+      }),
+    ),
+    Component.DesktopOnly(
+      Component.RecentNotes({
+        title: "Writing",
+        limit: 3,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("writing/") && f.slug !== "writing/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "writing/" as SimpleSlug,
+      }),
+    ),
+  ],
   right: [],
 }
