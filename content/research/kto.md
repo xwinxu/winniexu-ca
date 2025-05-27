@@ -1,6 +1,7 @@
 ---
 title: "KTO: Model Alignment as Prospect Theoretic Optimization"
 date: 2024-02-20
+tags: ["alignment", "icml"]
 ---
 
 [Kawin Ethayarajh](https://kawine.github.io/), **Winnie Xu**, [Niklas Muennighoff](https://muennighoff.github.io/), [Dan Jurafsky](https://web.stanford.edu/~jurafsky/), [Douwe Kiela](https://douwekiela.github.io/)
