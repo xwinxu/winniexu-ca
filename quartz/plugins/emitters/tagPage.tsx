@@ -31,10 +31,7 @@ function computeTagInfo(
 
   const tagDescriptions: Record<string, ProcessedContent> = Object.fromEntries(
     [...tags].map((tag) => {
-      const title =
-        tag === "index"
-          ? i18n(locale).pages.tagContent.tagIndex
-          : `${i18n(locale).pages.tagContent.tag}: ${tag}`
+      const title = tag
       return [
         tag,
         defaultProcessedContent({
