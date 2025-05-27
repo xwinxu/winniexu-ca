@@ -1,7 +1,6 @@
 ---
 title: "Self–Similarity Priors: Neural Collages as Differentiable Fractal Representations"
 date: 2022-04-15
-noindex: false
 ---
 
 **Winnie Xu***, [Michael Poli*](https://zymrael.github.io/), [Stefano Masseroli*](https://scholar.google.co.jp/citations?user=IwCfl4UAAAAJ&hl=en), [Chenlin Meng](https://cs.stanford.edu/~chenlin/), [Kuno Kim](https://scholar.google.com/citations?user=xhMkQfwAAAAJ&hl=en), [Stefano Ermon](https://cs.stanford.edu/~ermon/)

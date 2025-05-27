@@ -1,10 +1,7 @@
 ---
 title: "Revisiting Associative Compression: I Can't Believe It's Not Better"
 date: 2023-07-11
-tags: []
 ---
-
-## Revisiting Associative Compression: I Can't Believe It's Not Better
 
 **Winnie Xu**, [Matthew J Muckley](https://mmuckley.github.io/), [Yann Dubois](https://yanndubs.github.io/), [Karen Ullrich](https://karenullrich.info/)
 

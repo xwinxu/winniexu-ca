@@ -3,8 +3,6 @@ title: "KTO: Model Alignment as Prospect Theoretic Optimization"
 date: 2024-02-20
 ---
 
-## KTO: Model Alignment as Prospect Theoretic Optimization
-
 [Kawin Ethayarajh](https://kawine.github.io/), **Winnie Xu**, [Niklas Muennighoff](https://muennighoff.github.io/), [Dan Jurafsky](https://web.stanford.edu/~jurafsky/), [Douwe Kiela](https://douwekiela.github.io/)
 
 Alignment methods like RLHF and DPO expect feedback in the form of preferences (e.g., Output A is better than B for input X). Utilizing human annotation efforts for this feedback quickly gets very expensive, and can also result in conflicting data. Kahneman-Tversky Optimization (KTO) matches or exceeds (state-of-the-art) DPO performance without using preference data. KTO is far easier to use in the real world, where preferences are scarce and expensive to collect.
