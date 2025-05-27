@@ -14,6 +14,7 @@ export const sharedPageComponents: SharedLayout = {
       "Twitter/X": "https://x.com/winniethexu",
       LinkedIn: "https://www.linkedin.com/in/winnie-xu/",
       Email: "mailto:winniexu@cs.stanford.edu",
+      CV: "/CV.pdf",
     },
   }),
 }
