@@ -1,5 +1,6 @@
 ---
-title: winniexu.ca
+showPageTitle: false
+showContentMeta: false
 ---
 
 ![](films/jp_butt_snow_vend.jpg)
