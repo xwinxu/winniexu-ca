@@ -1,3 +1,111 @@
 @use "./base.scss";
 
 // put your custom CSS here!
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+
+  p {
+    margin: 0;
+  }
+
+  img {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+// Ceramics portfolio layout
+.ceramics-intro {
+  margin-bottom: 2.5rem;
+  line-height: 1.7;
+  overflow: hidden;
+
+  .intro-image {
+    width: 260px;
+    height: 260px;
+    object-fit: cover;
+    border-radius: 6px;
+    float: left;
+    margin-right: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .social-link {
+    font-style: italic;
+  }
+}
+
+h2.ceramics-year {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 2rem 0 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--lightgray);
+}
+
+.artwork-entry {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  align-items: flex-start;
+
+  .artwork-images {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    max-width: 70%;
+
+    img {
+      flex: 1;
+      min-width: 0;
+      height: 250px;
+      object-fit: cover;
+      border-radius: 4px;
+      background-color: #f0f0f0;
+    }
+  }
+
+  .artwork-info {
+    flex: 0 0 180px;
+    padding-top: 0.25rem;
+
+    .artwork-title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .artwork-details {
+      color: var(--gray);
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .artwork-entry {
+    flex-direction: column;
+
+    .artwork-info {
+      flex: none;
+    }
+
+    .artwork-images img {
+      height: 200px;
+    }
+  }
+}
