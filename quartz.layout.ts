@@ -61,10 +61,10 @@ export const defaultContentPageLayout: PageLayout = {
     ),
     Component.DesktopOnly(
       Component.RecentNotes({
-        title: "Crafts",
+        title: "Craft",
         limit: 3,
-        filter: (f: any) => (f.slug ? (f.slug.startsWith("crafts/") && f.slug !== "crafts/index" && !f.frontmatter?.noindex) : false),
-        linkToMore: "crafts/" as SimpleSlug,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("craft/") && f.slug !== "craft/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "craft/" as SimpleSlug,
       }),
     ),
     Component.DesktopOnly(
@@ -127,10 +127,10 @@ export const defaultListPageLayout: PageLayout = {
     ),
     Component.DesktopOnly(
       Component.RecentNotes({
-        title: "Crafts",
+        title: "Craft",
         limit: 3,
-        filter: (f: any) => (f.slug ? (f.slug.startsWith("crafts/") && f.slug !== "crafts/index" && !f.frontmatter?.noindex) : false),
-        linkToMore: "crafts/" as SimpleSlug,
+        filter: (f: any) => (f.slug ? (f.slug.startsWith("craft/") && f.slug !== "craft/index" && !f.frontmatter?.noindex) : false),
+        linkToMore: "craft/" as SimpleSlug,
       }),
     ),
     Component.DesktopOnly(
