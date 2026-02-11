@@ -9,7 +9,7 @@ Winnie Xu is a self-taught hobbyist in ceramics inspired by East Asian sculptura
 
 Each piece is wheel-thrown, potentially altered organically post-trim, and finished off with a dance of different glaze combos to something that is, surprisingly, functional and (hopefully) beautiful.
 
-<span class="social-link">Follow @xu.haus on instagram for real-time updates (:</span>
+<span class="social-link">Follow <a href="https://instagram.com/xu.haus">@xu.haus</a> on instagram for real-time updates (:</span>
 
 </div>
 
