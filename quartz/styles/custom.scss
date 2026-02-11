@@ -73,8 +73,13 @@ h2.ceramics-year {
       min-width: 0;
       height: 250px;
       object-fit: cover;
+      object-position: center;
       border-radius: 4px;
       background-color: #f0f0f0;
+    }
+
+    &:has(img:only-child) img {
+      height: 350px;
     }
   }
 
@@ -92,6 +97,14 @@ h2.ceramics-year {
       color: var(--gray);
       font-size: 0.85rem;
       line-height: 1.5;
+    }
+
+    .artwork-sold {
+      display: block;
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      font-style: italic;
+      color: var(--gray);
     }
   }
 }
