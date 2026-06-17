@@ -2,7 +2,7 @@
 title: Japan
 ---
 
-| <!-- --> | <!-- --> |
+| &nbsp; | &nbsp; |
 |---|---|
 | ![](../films/000000920002250418.jpg) | ![](../films/000000940004250418.jpg) |
 | ![](../films/000009.JPG) | ![](../films/000012%20(1).JPG) |
@@ -16,4 +16,4 @@ title: Japan
 | ![](../films/000039%20(1).JPG) | ![](../films/000039.JPG) |
 | ![](../films/000043.JPG) | ![](../films/000045.JPG) |
 | ![](../films/000066.JPG) | ![](../films/jp_butt_snow_vend.jpg) |
-| ![](../films/jp_twee_banner.JPG) | <!-- --> | 
+| ![](../films/jp_twee_banner.JPG) | &nbsp; |
