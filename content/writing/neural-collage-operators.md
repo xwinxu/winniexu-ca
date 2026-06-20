@@ -11,7 +11,7 @@ tags:
 Representing **data** as the **parameters** of an **iterative map**.
 Given a set of parameters, the data is recovered as the (unique) fixed-point of the map.
 
-![](neural-collage-operators/img01.gif)
+![](../writing-assets/neural-collage-operators/img01.gif)
 
 ## Overview
 
@@ -21,7 +21,7 @@ We propose to represent data as the parameters of a contractive, iterative map d
 
 We investigate how to leverage collage representations produced by Neural Collages in various tasks, including generation and compression. Neural Collages are orders of magnitude faster than other self–similarity–based image compression algorithms during encoding and offer compression rates competitive with other deep implicit methods. We showcase further applications of Neural Collages as a method to produce fractal art.
 
-![](neural-collage-operators/img02.svg)
+![](../writing-assets/neural-collage-operators/img02.svg)
 
 ## Intuition: Representations of Data
 
@@ -43,7 +43,7 @@ Take a simple affine function to define such a map:
 $x_{k+1} = a \circ x_k + b,\quad |a|< 1$
 Given $\omega$, $x$ can be recovered by repeatedly applying (i.e. iterating) the map starting from any arbitrary point $x_k$ on the grid below. This example uses 4 real numbers to recover $x_{k+1}$ instead of just two elements of the vector $x$ – not exactly a gain!
 
-![](neural-collage-operators/img03.gif)
+![](../writing-assets/neural-collage-operators/img03.gif)
 
 However, we can certainly select other classes of functions that may help reduce the number of required parameters, which is the case of collage operators. Note that these approaches to encoding data are lossy, meaning the original data can only be recovered to a certain degree of accuracy.
 
@@ -104,15 +104,15 @@ Partitioning schemes directly affect the size of the representation: larger patc
 
 Below, we show the decoding steps of a collage operator:
 
-![](neural-collage-operators/img04.gif)
+![](../writing-assets/neural-collage-operators/img04.gif)
 
-![](neural-collage-operators/img05.gif)
+![](../writing-assets/neural-collage-operators/img05.gif)
 
-![](neural-collage-operators/img06.gif)
+![](../writing-assets/neural-collage-operators/img06.gif)
 
-![](neural-collage-operators/img07.gif)
+![](../writing-assets/neural-collage-operators/img07.gif)
 
-![](neural-collage-operators/img08.gif)
+![](../writing-assets/neural-collage-operators/img08.gif)
 
 Increasing the size of output patches reduces the accuracy and requires a significantly smaller number of floats to represent an image, resulting in high compression ratios (i.e. representation sizes such as number of bytes for original image versus serialized collage parameters) between bits required to serialize the image compared to the corresponding collage parameters. Refer to the [colab](https://colab.research.google.com/drive/19SMWkp8y_2grg_wRyzi_F1IvMgN5mShi?usp=sharing) for details on how to compute these values.
 
@@ -129,9 +129,9 @@ We train deep generative models (VDVAEs) with collage parameters as latent varia
 
 Regardless of the image size used during training, incorporating Neural Collages in a generative model allows sampling (decoding an image from a sample of collage parameters) at arbitrary resolution. Note that the perceptual artifacts introduced by the upsampling procedure depend on the collage operator type: for example, using augmentation transforms to produce auxiliary patches from domain patches at each iteration may result in details of different effects including reconstructions with rotations or flips.
 
-![](neural-collage-operators/img09.png)
+![](../writing-assets/neural-collage-operators/img09.png)
 
-![](neural-collage-operators/img10.png)
+![](../writing-assets/neural-collage-operators/img10.png)
 
 ### Image Compressors
 
@@ -139,13 +139,13 @@ We train Neural Collages on a random crops dataset of high-resolution aerial ima
 
 To leverage similarity across an entire dataset, we introduce auxiliary input patches into a collage iteration (refer to the “generate candidates” step in code). Better compression ratios are achieved by regularizing the collage parameters to assume small values, followed by a bit-packing step.
 
-![](neural-collage-operators/img11.png)
+![](../writing-assets/neural-collage-operators/img11.png)
 
-![](neural-collage-operators/img12.png)
+![](../writing-assets/neural-collage-operators/img12.png)
 
-![](neural-collage-operators/img13.png)
+![](../writing-assets/neural-collage-operators/img13.png)
 
-![](neural-collage-operators/img14.png)
+![](../writing-assets/neural-collage-operators/img14.png)
 
 ### Creative Applications
 
@@ -157,7 +157,7 @@ Neural Collages are inspired by Partitioned Iterated Function Systems (PIFS), th
 
 And yes, Neural Collages can be applied to point clouds (as the first IFSs of Barnsley et al.) to produce “true” fractals!
 
-![](neural-collage-operators/img15.gif)
+![](../writing-assets/neural-collage-operators/img15.gif)
 
 ## Conclusion
 
@@ -179,6 +179,6 @@ If this work is interesting, please feel free to cite:
 This blog was written jointly with Michael Poli.
 Thanks to Stefano Ermon, Stefano Massaroli, Jascha Sohl-Dickstein, and David Duvenaud for feedback and discussion on earlier drafts of this post.
 
-![](neural-collage-operators/img16.gif)
+![](../writing-assets/neural-collage-operators/img16.gif)
 
-![](neural-collage-operators/img17.gif)
+![](../writing-assets/neural-collage-operators/img17.gif)

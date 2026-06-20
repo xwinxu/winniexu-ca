@@ -8,7 +8,7 @@ tags:
 
 That's the idea of **sparse networks**, where each layer's neurons are only connected to a few others in the next. Here, I explore the effects of different ways of "pruning" a network, save on matrix operations, and evaluate the maximum amount of sacrifice we can afford to make on accuracy.
 
-![](sparsifying-neural-networks/img01.png)
+![](../writing-assets/sparsifying-neural-networks/img01.png)
 
 ## Two Methods
 
@@ -30,7 +30,7 @@ Applying the two pruning methods, I expected the accuracy to decline significant
 
 Generally, both methods of pruning showcased some time of plateau and a consistently negative derivative, which implies the insignificance of up to some threshold number of parameters in the network towards the contribution of the output prediction. This threshold value was around 70-75% sparsity in weight pruning and just under 50% sparsity in the unit pruning, leading to weight pruning being an overall more effective method than unit pruning.
 
-![](sparsifying-neural-networks/img02.png)
+![](../writing-assets/sparsifying-neural-networks/img02.png)
 
 ## Final Thoughts
 
