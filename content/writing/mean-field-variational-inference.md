@@ -1,5 +1,5 @@
 ---
-title: Mean Field Variational Inference
+title: "Mean Field Variational Inference"
 tags:
   - machine-learning
 ---
@@ -10,11 +10,11 @@ Some key (but non-exhaustive) concepts to be familiar with to help with derivati
 
 ### Statistical Inference as Optimization
 
-Variational auto-encoders (VAEs) on a high level are composed of the following:
+[Variational auto-encoders](https://arxiv.org/abs/1312.6114) (VAEs) on a high level are composed of the following:
 1. Encoder ( $ \phi $ ): learn the $\mu, \sigma $ for $ z \sim \mathcal{N}(\mu, \sigma^2) $ so that we can sample from $q_{\phi}(z|x)$
 2. Decoder ( $ \theta $ ): learn a representation of the observations $ \tilde x \sim p_{\theta}(x | z) $
 
-Variational inference (VI) is an algorithm for learning the parameters $ \theta $ and $ \phi $ for approximating the mapping from the inputs / observations $ x $ to a process generating such inputs $ p(x) $ (true distribution).
+[Variational inference](https://arxiv.org/abs/1601.00670) (VI) is an algorithm for learning the parameters $ \theta $ and $ \phi $ for approximating the mapping from the inputs / observations $ x $ to a process generating such inputs $ p(x) $ (true distribution).
 
 To generate samples $ \tilde x^{(i)} \sim p_{\theta}(x) $ that look like $ x^{(i)} $:
 1. Sample from the prior: $ z^{(i)} \sim p_{\theta}(z) $
@@ -38,7 +38,7 @@ $$
 
 ### Inference on $ z $
 
-We want to learn a posterior distribution over latent (un-observable) variables $ z $. The MCMC approach to doing so is via Bayesian inference:
+We want to learn a posterior distribution over latent (un-observable) variables $ z $. The [MCMC](https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo) approach to doing so is via Bayesian inference:
 
 $$
 p_{\theta}(z|x) = \frac{p_{\theta}(z)p_{\theta}(x|z)}{\int p_{\theta}(z)p_{\theta}(x|z)dz}
@@ -48,7 +48,7 @@ Notice that the marginal distribution in the denominator becomes intractable for
 
 In VI, we instead learn the parameters $ \phi $ to an approximate posterior $ q_{\phi}(z) $ restricted to a tractable family of distributions that is factorizable (aka 'mean-field'). We do stochastic optimization by maximizing the an objective representing a lower bound on the log marginal likelihood:  ELBO.
 
-Check out my JAX implementation of a VAE trained on a toy MNIST classification task here.
+Check out my JAX implementation of a VAE trained on a toy MNIST classification task [here](https://github.com/xwinxu/variational-mnist).
 
 ### $ \log{p(.)} $
 
@@ -118,8 +118,12 @@ which makes sense to optimize for this quantity: if the KL divergence is zero, t
 
 If you are interested in looking at more advanced topics, I really enjoyed the following slides/papers/blogs:
 
-- OG Tutorial on VAEs
-- Variational Inference Tutorial
-- Extensive summary of gradient estimators
-- Writeup on mean field methods
-- ELBO Surgery
+[OG Tutorial on VAEs](https://arxiv.org/abs/1606.05908)
+
+[Variational Inference Tutorial](https://www.shakirm.com/papers/VITutorial.pdf)
+
+[Extensive summary of gradient estimators](https://yugeten.github.io/posts/2020/06/elbo/)
+
+[Writeup on mean field methods](http://ruishu.io/docs/chapter-5-field.pdf)
+
+[ELBO Surgery](http://approximateinference.org/accepted/HoffmanJohnson2016.pdf)
