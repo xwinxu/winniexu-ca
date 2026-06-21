@@ -69,25 +69,25 @@ n, c, h, w = 10, 32, 64, 128
 
 x = np.random.normal([n, c, h, w])
 
-rearrange`:` If you've ported PyTorch code to JAX, you've likely had to convert BCHW to BHWC. This can be done simply: `rearrange(x, 'b c h w -> b h w c')`
+rearrange: If you've ported PyTorch code to JAX, you've likely had to convert BCHW to BHWC. This can be done simply: `rearrange(x, 'b c h w -> b h w c')`
 
-reduce`:` If you want to reduce via some operation on some axis: `reduce(x, 'b c h w -> b c')`, the resulting shape is as you'd expect / specified in the einsum string.
+reduce: If you want to reduce via some operation on some axis: `reduce(x, 'b c h w -> b c')`, the resulting shape is as you'd expect / specified in the einsum string.
 
-rearrange`:` If you want to take the transpose along two dimensions: `rearrange(x1, 'b c -> c b')`, the resulting shape is as you'd expect / specified in the einsum string.
+rearrange: If you want to take the transpose along two dimensions: `rearrange(x1, 'b c -> c b')`, the resulting shape is as you'd expect / specified in the einsum string.
 
-parse_shape`:` To confirm and check that each dimension matches as expected: `parse_shape(x_5d, 'b c x y z')` results in `{'b': 10, 'c': 32, 'x': 100, 'y': 10, 'z': 20}`. To skip out on some dims: `parse_shape(x_5d, 'batch c - - -').`
+parse_shape: To confirm and check that each dimension matches as expected: `parse_shape(x_5d, 'b c x y z')` results in `{'b': 10, 'c': 32, 'x': 100, 'y': 10, 'z': 20}`. To skip out on some dims: `parse_shape(x_5d, 'batch c - - -').`
 
 ### Common usage patterns
 
-flatten`: rearrange(x, 'b c h w -> b (c h w)') # (10, 32, 100, 200) -> (10, 640000)`
+flatten: `rearrange(x, 'b c h w -> b (c h w)') # (10, 32, 100, 200) -> (10, 640000)`
 
 ```python
 space-to-depth: rearrange(x, 'b c (h h1) (w w1) -> b (h1 w1 c) h w', h1=2, w1=2) # (10, 32, 100, 200) -> (10, 32, 100, 200)
 ```
 
-global avg pool`: reduce(x, 'b c h w -> b c', reduction='mean') # (10, 32, 100, 200) -> (10, 32)`
+global avg pool: `reduce(x, 'b c h w -> b c', reduction='mean') # (10, 32, 100, 200) -> (10, 32)`
 
-max pool w/ kxk kernel`: reduce(x, 'b c (h h1) (w w1) -> b c h w', reduction='max', h1=k1, w1=k2) # (10, 32, 100//k1, 100%k1, 200//k2, 200%k2) -> (10, 32)`
+max pool w/ kxk kernel: `reduce(x, 'b c (h h1) (w w1) -> b c h w', reduction='max', h1=k1, w1=k2) # (10, 32, 100//k1, 100%k1, 200//k2, 200%k2) -> (10, 32)`
 
 ```python
 expand_dims: rearrange(x[0, :3], 'c h w -> h w c') # (32, 100, 200) -> (100, 200, 32)
