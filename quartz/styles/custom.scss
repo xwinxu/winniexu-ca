@@ -26,6 +26,34 @@
   }
 }
 
+// Photography gallery (masonry — preserves each photo's aspect ratio)
+.photo-grid {
+  column-count: 3;
+  column-gap: 10px;
+
+  img {
+    width: 100%;
+    margin: 0 0 10px;
+    border-radius: 6px;
+    display: block;
+    break-inside: avoid;
+    background-color: #f0f0f0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: scale(1.01);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .photo-grid { column-count: 2; }
+}
+@media (max-width: 550px) {
+  .photo-grid { column-count: 1; }
+}
+
 // Ceramics portfolio layout
 .ceramics-intro {
   margin-bottom: 2.5rem;
