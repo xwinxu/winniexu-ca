@@ -1,0 +1,5 @@
+---
+title: Europe
+---
+
+*Coming soon.*
