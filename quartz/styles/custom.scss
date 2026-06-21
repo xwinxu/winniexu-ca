@@ -54,6 +54,40 @@
   .photo-grid { column-count: 1; }
 }
 
+// Single-column photos (full width, featured)
+.photo-single img {
+  width: 100%;
+  margin: 0 0 12px;
+  border-radius: 6px;
+  display: block;
+  background-color: #f0f0f0;
+}
+
+// Two-column photo masonry (preserves aspect ratio)
+.photo-2col {
+  column-count: 2;
+  column-gap: 10px;
+
+  img {
+    width: 100%;
+    margin: 0 0 10px;
+    border-radius: 6px;
+    display: block;
+    break-inside: avoid;
+    background-color: #f0f0f0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: scale(1.01);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+@media (max-width: 550px) {
+  .photo-2col { column-count: 1; }
+}
+
 // Ceramics portfolio layout
 .ceramics-intro {
   margin-bottom: 2.5rem;
