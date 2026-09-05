@@ -176,27 +176,6 @@
     margin: 0 0 5px 0;
   }
 
-  .back-title {
-    font-family: 'Newsreader', Georgia, serif;
-    font-style: italic;
-    font-weight: 500;
-    font-size: 14px;
-    line-height: 1.25;
-    color: #17171a;
-    margin: 0 0 4px 0;
-  }
-
-  .back-text {
-    font-size: 11px;
-    line-height: 1.4;
-    color: #4a4640;
-    margin: 0;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-  }
-
   .hint {
     margin-top: 10px;
     padding: 0 4px;
@@ -205,17 +184,6 @@
     color: var(--ink-dim);
     letter-spacing: 0.02em;
   }
-
-  /* Active frame actions */
-  .result-actions {
-    display: none;
-    gap: 10px;
-    margin-top: 18px;
-    padding: 0 4px;
-    flex-wrap: wrap;
-  }
-
-  .result-actions.visible { display: flex; }
 
   .action-btn {
     font-family: 'IBM Plex Mono', monospace;
@@ -329,8 +297,125 @@
     letter-spacing: 0.02em;
   }
 
+  /* Enlarged frame modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 11, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal-panel {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--paper);
+    border: 1px solid var(--paper-dim);
+    padding: 40px 30px 30px;
+    transform: scale(0.94) translateY(6px);
+    transition: transform 240ms cubic-bezier(0.3, 0.1, 0.25, 1);
+  }
+
+  .modal-overlay.open .modal-panel {
+    transform: scale(1) translateY(0);
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    line-height: 1;
+    color: #6b675f;
+    cursor: pointer;
+    padding: 8px;
+  }
+  .modal-close:hover { color: #17171a; background: none; }
+
+  .modal-image {
+    width: 100%;
+    max-height: 260px;
+    object-fit: cover;
+    margin: -40px -30px 20px;
+    display: block;
+    width: calc(100% + 60px);
+  }
+
+  .modal-index {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--safelight-dim);
+    margin: 0 0 10px 0;
+  }
+
+  .modal-title {
+    font-family: 'Newsreader', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 26px;
+    line-height: 1.25;
+    color: #17171a;
+    margin: 0 0 14px 0;
+  }
+
+  .modal-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #4a4640;
+    margin: 0;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 26px;
+    flex-wrap: wrap;
+  }
+
+  .modal-actions .action-btn {
+    border-color: var(--paper-dim);
+    color: #4a4640;
+  }
+  .modal-actions .action-btn:hover {
+    border-color: #17171a;
+    color: #17171a;
+  }
+
+  @media (max-width: 520px) {
+    .modal-overlay { padding: 0; }
+    .modal-panel {
+      max-width: none;
+      max-height: none;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 32px 24px;
+    }
+    .modal-title { font-size: 24px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .flip-inner { transition: none; }
+    .flip-inner, .modal-overlay, .modal-panel { transition: none; }
   }
 </style>
 </head>
@@ -350,12 +435,6 @@
   </div>
 
   <p class="hint">scroll the roll, tap a frame to develop it</p>
-
-  <div class="result-actions" id="resultActions">
-    <button class="action-btn" id="saveBtn">Save frame</button>
-    <button class="action-btn" id="emailBtn">Email it</button>
-    <button class="action-btn" id="textBtn">Text it</button>
-  </div>
 
   <footer>
     <button class="reset-link" id="resetBtn">flip the roll back over</button>
@@ -377,7 +456,24 @@
 
 </div>
 
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-panel" id="modalPanel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+    <img class="modal-image" id="modalImage" alt="" hidden>
+    <p class="modal-index" id="modalIndex"></p>
+    <h2 class="modal-title" id="modalTitle"></h2>
+    <p class="modal-text" id="modalText"></p>
+    <div class="modal-actions">
+      <button class="action-btn" id="saveBtn">Save frame</button>
+      <button class="action-btn" id="emailBtn">Email it</button>
+      <button class="action-btn" id="textBtn">Text it</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  // `image` is optional — a URL to a reference photo shown at the top of
+  // the enlarged frame. Leave it unset for a text-only prompt.
   const prompts = [
     { title: "Ground as Composition", text: "Shoot straight down. Find a group of people on a textured or patterned surface and let the ground become the composition." },
     { title: "Pure Geometry", text: "Find a staircase, ramp, or scaffold and shoot it as pure geometry — no horizon, no sky, just lines and light." },
@@ -395,7 +491,12 @@
 
   const framesScrollEl = document.getElementById('framesScroll');
   const resetBtn = document.getElementById('resetBtn');
-  const resultActionsEl = document.getElementById('resultActions');
+  const modalOverlayEl = document.getElementById('modalOverlay');
+  const modalCloseEl = document.getElementById('modalClose');
+  const modalImageEl = document.getElementById('modalImage');
+  const modalIndexEl = document.getElementById('modalIndex');
+  const modalTitleEl = document.getElementById('modalTitle');
+  const modalTextEl = document.getElementById('modalText');
   const saveBtn = document.getElementById('saveBtn');
   const emailBtn = document.getElementById('emailBtn');
   const textBtn = document.getElementById('textBtn');
@@ -405,12 +506,6 @@
   const promptTextEl = document.getElementById('promptText');
   const addStatusEl = document.getElementById('addStatus');
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
   function makeCard(index) {
     const p = prompts[index];
     const card = document.createElement('div');
@@ -418,7 +513,7 @@
     card.dataset.index = String(index);
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
-    card.setAttribute('aria-label', 'Frame ' + String(index + 1).padStart(2, '0') + ', tap to reveal prompt');
+    card.setAttribute('aria-label', 'Frame ' + String(index + 1).padStart(2, '0') + ', tap to develop');
 
     card.innerHTML =
       '<div class="flip-inner">' +
@@ -428,16 +523,14 @@
         '</div>' +
         '<div class="flip-face flip-back">' +
           '<p class="back-index">FRAME ' + String(index + 1).padStart(2, '0') + '</p>' +
-          '<p class="back-title">' + escapeHtml(p.title) + '</p>' +
-          '<p class="back-text">' + escapeHtml(p.text) + '</p>' +
         '</div>' +
       '</div>';
 
-    card.addEventListener('click', () => toggleCard(card, index));
+    card.addEventListener('click', () => selectFrame(index));
     card.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        toggleCard(card, index);
+        selectFrame(index);
       }
     });
 
@@ -453,20 +546,33 @@
     });
   }
 
-  function toggleCard(card, index) {
-    const isFlipped = card.classList.toggle('flipped');
-    flippedOrder = flippedOrder.filter((i) => i !== index);
-    if (isFlipped) {
-      flippedOrder.push(index);
-      activeIndex = index;
-    } else {
-      activeIndex = flippedOrder.length ? flippedOrder[flippedOrder.length - 1] : null;
-    }
-    updateActions();
+  function selectFrame(index) {
+    if (!flippedOrder.includes(index)) flippedOrder.push(index);
+    const card = framesScrollEl.querySelector('.flip-card[data-index="' + index + '"]');
+    if (card) card.classList.add('flipped');
+    activeIndex = index;
+    openModal(index);
   }
 
-  function updateActions() {
-    resultActionsEl.classList.toggle('visible', activeIndex !== null);
+  function openModal(index) {
+    const p = prompts[index];
+    modalIndexEl.textContent = 'FRAME ' + String(index + 1).padStart(2, '0') + ' / ' + String(prompts.length).padStart(2, '0');
+    modalTitleEl.textContent = p.title;
+    modalTextEl.textContent = p.text;
+    if (p.image) {
+      modalImageEl.src = p.image;
+      modalImageEl.alt = p.title;
+      modalImageEl.hidden = false;
+    } else {
+      modalImageEl.hidden = true;
+      modalImageEl.removeAttribute('src');
+    }
+    modalOverlayEl.classList.add('open');
+    modalCloseEl.focus();
+  }
+
+  function closeModal() {
+    modalOverlayEl.classList.remove('open');
   }
 
   function currentPromptText() {
@@ -482,8 +588,8 @@
   function resetRoll() {
     flippedOrder = [];
     activeIndex = null;
+    closeModal();
     buildFrames();
-    updateActions();
   }
 
   function wrapText(ctx, text, maxWidth) {
@@ -588,6 +694,13 @@
   saveBtn.addEventListener('click', saveFrame);
   emailBtn.addEventListener('click', emailFrame);
   textBtn.addEventListener('click', textFrame);
+  modalCloseEl.addEventListener('click', closeModal);
+  modalOverlayEl.addEventListener('click', (e) => {
+    if (e.target === modalOverlayEl) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalOverlayEl.classList.contains('open')) closeModal();
+  });
   addToggle.addEventListener('click', () => {
     const open = addForm.classList.toggle('open');
     addToggle.textContent = open ? '– add a prompt to this roll' : '+ add a prompt to this roll';
@@ -596,7 +709,6 @@
   addForm.addEventListener('submit', addPrompt);
 
   buildFrames();
-  updateActions();
 </script>
 
 </body>
