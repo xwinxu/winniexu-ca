@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Draw a Frame — Photo Walk</title>
+<title>Photo Walk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
@@ -288,8 +288,8 @@
 <div class="wrap">
 
   <header>
-    <p class="kicker">Photo Walk — Draw a Frame</p>
-    <h1>Nine frames, one roll, black and white only.</h1>
+    <p class="kicker">Photo Walk</p>
+    <h1>A roll of nine, shot blind.</h1>
   </header>
 
   <div class="filmstrip" id="filmstrip"></div>
