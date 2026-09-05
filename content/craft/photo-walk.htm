@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draw a Frame — Photo Walk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #17171a;
+    --bg-raised: #1d1d21;
+    --paper: #f1ece0;
+    --paper-dim: #cfc9bc;
+    --line: #3a3a3e;
+    --line-soft: #29292d;
+    --ink: #e8e4da;
+    --ink-dim: #8c8b86;
+    --safelight: #b8562f;
+    --safelight-dim: #6e3a22;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Newsreader', Georgia, serif;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 80px;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  header {
+    text-align: left;
+    margin-bottom: 36px;
+  }
+
+  .kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--safelight);
+    margin: 0 0 10px 0;
+  }
+
+  h1 {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 30px;
+    line-height: 1.25;
+    margin: 0 0 12px 0;
+    color: var(--ink);
+    max-width: 22ch;
+  }
+
+  header p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-dim);
+    max-width: 46ch;
+    margin: 0;
+  }
+
+  /* Filmstrip */
+  .filmstrip {
+    display: flex;
+    align-items: stretch;
+    background: #0f0f11;
+    border: 1px solid var(--line);
+    padding: 10px 6px;
+    overflow-x: auto;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .sprockets {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2px 0;
+    flex-shrink: 0;
+  }
+
+  .sprockets span {
+    width: 6px;
+    height: 6px;
+    background: var(--line);
+    display: block;
+  }
+
+  .frame-thumb {
+    flex-shrink: 0;
+    width: 40px;
+    height: 52px;
+    border: 1px solid var(--line-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    background: #131315;
+    transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease;
+  }
+
+  .frame-thumb.exposed {
+    border-color: var(--safelight);
+    color: var(--safelight);
+    background: #1c1310;
+  }
+
+  .frame-thumb.current {
+    border-color: var(--paper);
+    color: var(--paper);
+    background: #232320;
+  }
+
+  /* Main frame display */
+  .frame {
+    position: relative;
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    padding: 46px 34px;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin-top: 18px;
+    overflow: hidden;
+  }
+
+  .frame-index {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    letter-spacing: 0.03em;
+  }
+
+  .frame-empty {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-dim);
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+
+  .frame-title {
+    font-family: 'Newsreader', Georgia, serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--paper);
+    margin: 0 0 14px 0;
+    opacity: 0;
+  }
+
+  .frame-prompt {
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--ink);
+    margin: 0;
+    opacity: 0;
+  }
+
+  .frame.developing .frame-title,
+  .frame.developing .frame-prompt {
+    animation: develop 900ms ease forwards;
+  }
+
+  .frame.developing .frame-prompt { animation-delay: 120ms; }
+
+  @keyframes develop {
+    0%   { opacity: 0; filter: contrast(2) brightness(0.4); transform: translateY(3px); }
+    60%  { opacity: 1; filter: contrast(1.4) brightness(0.85); }
+    100% { opacity: 1; filter: contrast(1) brightness(1); transform: translateY(0); }
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 22px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    background: var(--safelight);
+    color: #17110c;
+    border: none;
+    padding: 13px 22px;
+    cursor: pointer;
+    transition: background 160ms ease;
+  }
+
+  button:hover { background: #c96336; }
+  button:disabled {
+    background: var(--line);
+    color: var(--ink-dim);
+    cursor: default;
+  }
+
+  .status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+
+  .reset-link {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .reset-link:hover { color: var(--ink); background: none; }
+
+  /* Result actions */
+  .result-actions {
+    display: none;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .result-actions.visible { display: flex; }
+
+  .action-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    background: transparent;
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+
+  .action-btn:hover {
+    border-color: var(--paper-dim);
+    color: var(--ink);
+    background: transparent;
+  }
+
+  footer {
+    margin-top: 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 16px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .frame.developing .frame-title,
+    .frame.developing .frame-prompt {
+      animation: none;
+      opacity: 1;
+      filter: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <p class="kicker">Photo Walk — Draw a Frame</p>
+    <h1>Nine frames, one roll, black and white only.</h1>
+  </header>
+
+  <div class="filmstrip" id="filmstrip"></div>
+
+  <div class="frame" id="frame">
+    <span class="frame-index" id="frameIndex"></span>
+    <div id="frameContent">
+      <p class="frame-empty">No frame exposed yet.</p>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="drawBtn">Draw a frame</button>
+    <span class="status" id="status">9 exposures left on the roll</span>
+  </div>
+
+  <div class="result-actions" id="resultActions">
+    <button class="action-btn" id="saveBtn">Save frame</button>
+    <button class="action-btn" id="emailBtn">Email it</button>
+    <button class="action-btn" id="textBtn">Text it</button>
+  </div>
+
+  <footer>
+    <button class="reset-link" id="resetBtn">reload the roll</button>
+  </footer>
+
+</div>
+
+<script>
+  const prompts = [
+    { title: "Ground as Composition", text: "Shoot straight down. Find a group of people on a textured or patterned surface and let the ground become the composition." },
+    { title: "Pure Geometry", text: "Find a staircase, ramp, or scaffold and shoot it as pure geometry — no horizon, no sky, just lines and light." },
+    { title: "Reflections Over Objects", text: "Photograph transparent things stacked or overlapping until the reflections matter more than the objects." },
+    { title: "Portrait by Reflection", text: "A portrait made entirely through a reflection — mirror, window, spoon — where the reflection distorts or doubles the person." },
+    { title: "The Shadow is the Subject", text: "Light a small object so its shadow becomes stranger or more interesting than the object itself." },
+    { title: "Scale That Doesn't Add Up", text: "Find something whose scale doesn't make sense in its surroundings — too big, too small, or floating." },
+    { title: "Camouflaged Figure", text: "Camouflage a person into a repeating pattern or material until you have to look twice to find them." },
+    { title: "Rotate the Ordinary", text: "Take a completely ordinary scene and rotate your framing 90°. Compose for the tilt, don't just tilt your head." },
+    { title: "Text as Object", text: "Find something that reads like a menu, label, or invitation — an everyday piece of text-as-object — and make it the whole photo." }
+  ];
+
+  const total = prompts.length;
+  let remaining = [...Array(total).keys()];
+  let currentIndex = null;
+
+  const filmstripEl = document.getElementById('filmstrip');
+  const frameEl = document.getElementById('frame');
+  const frameContentEl = document.getElementById('frameContent');
+  const frameIndexEl = document.getElementById('frameIndex');
+  const drawBtn = document.getElementById('drawBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const statusEl = document.getElementById('status');
+  const resultActionsEl = document.getElementById('resultActions');
+  const saveBtn = document.getElementById('saveBtn');
+  const emailBtn = document.getElementById('emailBtn');
+  const textBtn = document.getElementById('textBtn');
+
+  function buildFilmstrip() {
+    filmstripEl.innerHTML = '';
+
+    const leftSprockets = document.createElement('div');
+    leftSprockets.className = 'sprockets';
+    for (let i = 0; i < 6; i++) leftSprockets.appendChild(document.createElement('span'));
+    filmstripEl.appendChild(leftSprockets);
+
+    for (let i = 0; i < total; i++) {
+      const thumb = document.createElement('div');
+      thumb.className = 'frame-thumb';
+      thumb.id = 'thumb-' + i;
+      thumb.textContent = String(i + 1).padStart(2, '0');
+      if (!remaining.includes(i) && i !== currentIndex) thumb.classList.add('exposed');
+      if (i === currentIndex) thumb.classList.add('current');
+      filmstripEl.appendChild(thumb);
+    }
+
+    const rightSprockets = document.createElement('div');
+    rightSprockets.className = 'sprockets';
+    for (let i = 0; i < 6; i++) rightSprockets.appendChild(document.createElement('span'));
+    filmstripEl.appendChild(rightSprockets);
+  }
+
+  function updateStatus() {
+    if (remaining.length === 0) {
+      statusEl.textContent = 'roll finished — 0 exposures left';
+      drawBtn.disabled = true;
+      drawBtn.textContent = 'Roll finished';
+    } else {
+      statusEl.textContent = remaining.length + (remaining.length === 1 ? ' exposure left on the roll' : ' exposures left on the roll');
+      drawBtn.disabled = false;
+      drawBtn.textContent = 'Draw a frame';
+    }
+  }
+
+  function drawFrame() {
+    if (remaining.length === 0) return;
+    const pick = Math.floor(Math.random() * remaining.length);
+    const idx = remaining[pick];
+    remaining.splice(pick, 1);
+    currentIndex = idx;
+
+    const p = prompts[idx];
+    frameIndexEl.textContent = 'FRAME ' + String(idx + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    frameContentEl.innerHTML =
+      '<p class="frame-title">' + p.title + '</p>' +
+      '<p class="frame-prompt">' + p.text + '</p>';
+
+    frameEl.classList.remove('developing');
+    void frameEl.offsetWidth; // restart animation
+    frameEl.classList.add('developing');
+
+    resultActionsEl.classList.add('visible');
+
+    buildFilmstrip();
+    updateStatus();
+  }
+
+  function resetRoll() {
+    remaining = [...Array(total).keys()];
+    currentIndex = null;
+    frameIndexEl.textContent = '';
+    frameContentEl.innerHTML = '<p class="frame-empty">No frame exposed yet.</p>';
+    frameEl.classList.remove('developing');
+    resultActionsEl.classList.remove('visible');
+    buildFilmstrip();
+    updateStatus();
+  }
+
+  function currentPromptText() {
+    if (currentIndex === null) return null;
+    const p = prompts[currentIndex];
+    return {
+      label: 'Frame ' + String(currentIndex + 1).padStart(2, '0') + ' of ' + String(total).padStart(2, '0'),
+      title: p.title,
+      body: p.text
+    };
+  }
+
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  async function saveFrame() {
+    const p = currentPromptText();
+    if (!p) return;
+
+    try {
+      await Promise.all([
+        document.fonts.load('italic 40px "Newsreader"'),
+        document.fonts.load('500 22px "IBM Plex Mono"')
+      ]);
+    } catch (e) { /* fonts may already be loaded; proceed regardless */ }
+
+    const W = 900, H = 560;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#1d1d21';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#3a3a3e';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, W - 2, H - 2);
+
+    ctx.fillStyle = '#8c8b86';
+    ctx.font = '500 15px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.label.toUpperCase(), 60, 64);
+
+    ctx.fillStyle = '#f1ece0';
+    ctx.font = 'italic 40px "Newsreader", Georgia, serif';
+    const titleLines = wrapText(ctx, p.title, W - 120);
+    let y = 150;
+    titleLines.forEach(line => { ctx.fillText(line, 60, y); y += 48; });
+
+    y += 18;
+    ctx.fillStyle = '#e8e4da';
+    ctx.font = '26px "Newsreader", Georgia, serif';
+    const bodyLines = wrapText(ctx, p.body, W - 120);
+    bodyLines.forEach(line => { ctx.fillText(line, 60, y); y += 38; });
+
+    ctx.fillStyle = '#6e3a22';
+    ctx.font = '500 13px "IBM Plex Mono", monospace';
+    ctx.fillText('PHOTO WALK — BLACK & WHITE ONLY', 60, H - 40);
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = 'photo-walk-frame-' + String(currentIndex + 1).padStart(2, '0') + '.png';
+    link.click();
+  }
+
+  function emailFrame() {
+    const p = currentPromptText();
+    if (!p) return;
+    const subject = 'Your photo walk theme: ' + p.title;
+    const body = p.label + '\n\n' + p.title + '\n' + p.body;
+    window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  }
+
+  function textFrame() {
+    const p = currentPromptText();
+    if (!p) return;
+    const body = p.title + ' — ' + p.body;
+    window.location.href = 'sms:?&body=' + encodeURIComponent(body);
+  }
+
+  drawBtn.addEventListener('click', drawFrame);
+  resetBtn.addEventListener('click', resetRoll);
+  saveBtn.addEventListener('click', saveFrame);
+  emailBtn.addEventListener('click', emailFrame);
+  textBtn.addEventListener('click', textFrame);
+
+  buildFilmstrip();
+  updateStatus();
+</script>
+
+</body>
+</html>
