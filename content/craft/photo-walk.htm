@@ -35,12 +35,13 @@
 
   .wrap {
     width: 100%;
-    max-width: 560px;
+    max-width: 640px;
   }
 
   header {
     text-align: left;
     margin-bottom: 36px;
+    padding: 0 4px;
   }
 
   .kicker {
@@ -70,176 +71,147 @@
     margin: 0;
   }
 
-  /* Filmstrip */
-  .filmstrip {
-    display: flex;
-    align-items: stretch;
+  /* Film roll */
+  .filmroll {
     background: #0f0f11;
     border: 1px solid var(--line);
-    padding: 10px 6px;
+  }
+
+  .perf {
+    height: 14px;
+    background-color: #0f0f11;
+    background-image: radial-gradient(circle at 8px 7px, var(--line) 3.5px, transparent 4px);
+    background-size: 22px 14px;
+    background-repeat: repeat-x;
+  }
+
+  .frames-scroll {
+    display: flex;
+    gap: 12px;
     overflow-x: auto;
-    gap: 4px;
-    margin-bottom: 6px;
+    overflow-y: hidden;
+    padding: 18px 16px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .sprockets {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 2px 0;
+  .frames-scroll::-webkit-scrollbar { height: 6px; }
+  .frames-scroll::-webkit-scrollbar-track { background: transparent; }
+  .frames-scroll::-webkit-scrollbar-thumb { background: var(--line); }
+
+  .flip-card {
     flex-shrink: 0;
+    width: 168px;
+    height: 116px;
+    perspective: 900px;
+    scroll-snap-align: start;
+    cursor: pointer;
   }
 
-  .sprockets span {
-    width: 6px;
-    height: 6px;
-    background: var(--line);
-    display: block;
-  }
-
-  .frame-thumb {
-    flex-shrink: 0;
-    width: 40px;
-    height: 52px;
-    border: 1px solid var(--line-soft);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: var(--ink-dim);
-    background: #131315;
-    transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease;
-  }
-
-  .frame-thumb.exposed {
-    border-color: var(--safelight);
-    color: var(--safelight);
-    background: #1c1310;
-  }
-
-  .frame-thumb.current {
-    border-color: var(--paper);
-    color: var(--paper);
-    background: #232320;
-  }
-
-  /* Main frame display */
-  .frame {
+  .flip-inner {
     position: relative;
-    border: 1px solid var(--line);
-    background: var(--bg-raised);
-    padding: 46px 34px;
-    min-height: 260px;
+    width: 100%;
+    height: 100%;
+    transition: transform 550ms cubic-bezier(0.3, 0.1, 0.25, 1);
+    transform-style: preserve-3d;
+  }
+
+  .flip-card.flipped .flip-inner {
+    transform: rotateY(180deg);
+  }
+
+  .flip-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    margin-top: 18px;
     overflow: hidden;
   }
 
-  .frame-index {
-    position: absolute;
-    top: 16px;
-    right: 18px;
+  .flip-front {
+    background: #131315;
+    border: 1px solid var(--line-soft);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+
+  .flip-card:hover .flip-front,
+  .flip-card:focus-visible .flip-front {
+    border-color: var(--safelight-dim);
+    background: #17110c;
+  }
+
+  .frame-number {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: var(--ink-dim);
+    font-size: 20px;
     letter-spacing: 0.03em;
-  }
-
-  .frame-empty {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
     color: var(--ink-dim);
-    text-align: center;
-    letter-spacing: 0.02em;
   }
 
-  .frame-title {
+  .frame-tap {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--line);
+  }
+
+  .flip-back {
+    background: var(--paper);
+    border: 1px solid var(--paper-dim);
+    transform: rotateY(180deg);
+    padding: 14px 16px 12px;
+    justify-content: center;
+  }
+
+  .back-index {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    color: var(--safelight-dim);
+    margin: 0 0 5px 0;
+  }
+
+  .back-title {
     font-family: 'Newsreader', Georgia, serif;
     font-style: italic;
-    font-size: 22px;
-    color: var(--paper);
-    margin: 0 0 14px 0;
-    opacity: 0;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.25;
+    color: #17171a;
+    margin: 0 0 4px 0;
   }
 
-  .frame-prompt {
-    font-size: 17px;
-    line-height: 1.65;
-    color: var(--ink);
+  .back-text {
+    font-size: 11px;
+    line-height: 1.4;
+    color: #4a4640;
     margin: 0;
-    opacity: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
   }
 
-  .frame.developing .frame-title,
-  .frame.developing .frame-prompt {
-    animation: develop 900ms ease forwards;
-  }
-
-  .frame.developing .frame-prompt { animation-delay: 120ms; }
-
-  @keyframes develop {
-    0%   { opacity: 0; filter: contrast(2) brightness(0.4); transform: translateY(3px); }
-    60%  { opacity: 1; filter: contrast(1.4) brightness(0.85); }
-    100% { opacity: 1; filter: contrast(1) brightness(1); transform: translateY(0); }
-  }
-
-  /* Controls */
-  .controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 22px;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  button {
+  .hint {
+    margin-top: 10px;
+    padding: 0 4px;
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.03em;
-    background: var(--safelight);
-    color: #17110c;
-    border: none;
-    padding: 13px 22px;
-    cursor: pointer;
-    transition: background 160ms ease;
-  }
-
-  button:hover { background: #c96336; }
-  button:disabled {
-    background: var(--line);
-    color: var(--ink-dim);
-    cursor: default;
-  }
-
-  .status {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--ink-dim);
     letter-spacing: 0.02em;
   }
 
-  .reset-link {
-    background: none;
-    border: none;
-    color: var(--ink-dim);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    padding: 4px 0;
-    cursor: pointer;
-  }
-  .reset-link:hover { color: var(--ink); background: none; }
-
-  /* Result actions */
+  /* Active frame actions */
   .result-actions {
     display: none;
     gap: 10px;
-    margin-top: 14px;
+    margin-top: 18px;
+    padding: 0 4px;
     flex-wrap: wrap;
   }
 
@@ -264,7 +236,8 @@
   }
 
   footer {
-    margin-top: 40px;
+    margin-top: 32px;
+    padding: 0 4px;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
     color: var(--ink-dim);
@@ -273,11 +246,23 @@
     padding-top: 16px;
   }
 
+  .reset-link {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .reset-link:hover { color: var(--ink); background: none; }
+
   /* Add-prompt panel */
   .add-panel {
-    margin-top: 40px;
-    border-top: 1px solid var(--line-soft);
-    padding-top: 20px;
+    margin-top: 28px;
+    padding: 0 4px;
   }
 
   .add-toggle {
@@ -345,12 +330,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .frame.developing .frame-title,
-    .frame.developing .frame-prompt {
-      animation: none;
-      opacity: 1;
-      filter: none;
-    }
+    .flip-inner { transition: none; }
   }
 </style>
 </head>
@@ -363,19 +343,13 @@
     <h1>Let's roll with it.</h1>
   </header>
 
-  <div class="filmstrip" id="filmstrip"></div>
-
-  <div class="frame" id="frame">
-    <span class="frame-index" id="frameIndex"></span>
-    <div id="frameContent">
-      <p class="frame-empty">No frame exposed yet.</p>
-    </div>
+  <div class="filmroll">
+    <div class="perf"></div>
+    <div class="frames-scroll" id="framesScroll"></div>
+    <div class="perf"></div>
   </div>
 
-  <div class="controls">
-    <button id="drawBtn">Draw a frame</button>
-    <span class="status" id="status">9 exposures left on the roll</span>
-  </div>
+  <p class="hint">scroll the roll, tap a frame to develop it</p>
 
   <div class="result-actions" id="resultActions">
     <button class="action-btn" id="saveBtn">Save frame</button>
@@ -384,7 +358,7 @@
   </div>
 
   <footer>
-    <button class="reset-link" id="resetBtn">reload the roll</button>
+    <button class="reset-link" id="resetBtn">flip the roll back over</button>
   </footer>
 
   <div class="add-panel">
@@ -416,17 +390,11 @@
     { title: "Text as Object", text: "Find something that reads like a menu, label, or invitation — an everyday piece of text-as-object — and make it the whole photo." }
   ];
 
-  let total = prompts.length;
-  let remaining = [...Array(total).keys()];
-  let currentIndex = null;
+  let flippedOrder = []; // indices, most recently flipped last
+  let activeIndex = null;
 
-  const filmstripEl = document.getElementById('filmstrip');
-  const frameEl = document.getElementById('frame');
-  const frameContentEl = document.getElementById('frameContent');
-  const frameIndexEl = document.getElementById('frameIndex');
-  const drawBtn = document.getElementById('drawBtn');
+  const framesScrollEl = document.getElementById('framesScroll');
   const resetBtn = document.getElementById('resetBtn');
-  const statusEl = document.getElementById('status');
   const resultActionsEl = document.getElementById('resultActions');
   const saveBtn = document.getElementById('saveBtn');
   const emailBtn = document.getElementById('emailBtn');
@@ -437,90 +405,85 @@
   const promptTextEl = document.getElementById('promptText');
   const addStatusEl = document.getElementById('addStatus');
 
-  function buildFilmstrip() {
-    filmstripEl.innerHTML = '';
-
-    const leftSprockets = document.createElement('div');
-    leftSprockets.className = 'sprockets';
-    for (let i = 0; i < 6; i++) leftSprockets.appendChild(document.createElement('span'));
-    filmstripEl.appendChild(leftSprockets);
-
-    for (let i = 0; i < total; i++) {
-      const thumb = document.createElement('div');
-      thumb.className = 'frame-thumb';
-      thumb.id = 'thumb-' + i;
-      thumb.textContent = String(i + 1).padStart(2, '0');
-      if (!remaining.includes(i) && i !== currentIndex) thumb.classList.add('exposed');
-      if (i === currentIndex) thumb.classList.add('current');
-      filmstripEl.appendChild(thumb);
-    }
-
-    const rightSprockets = document.createElement('div');
-    rightSprockets.className = 'sprockets';
-    for (let i = 0; i < 6; i++) rightSprockets.appendChild(document.createElement('span'));
-    filmstripEl.appendChild(rightSprockets);
-  }
-
-  function updateStatus() {
-    if (remaining.length === 0) {
-      statusEl.textContent = 'roll finished — 0 exposures left';
-      drawBtn.disabled = true;
-      drawBtn.textContent = 'Roll finished';
-    } else {
-      statusEl.textContent = remaining.length + (remaining.length === 1 ? ' exposure left on the roll' : ' exposures left on the roll');
-      drawBtn.disabled = false;
-      drawBtn.textContent = 'Draw a frame';
-    }
-  }
-
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
   }
 
-  function drawFrame() {
-    if (remaining.length === 0) return;
-    const pick = Math.floor(Math.random() * remaining.length);
-    const idx = remaining[pick];
-    remaining.splice(pick, 1);
-    currentIndex = idx;
+  function makeCard(index) {
+    const p = prompts[index];
+    const card = document.createElement('div');
+    card.className = 'flip-card';
+    card.dataset.index = String(index);
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', 'Frame ' + String(index + 1).padStart(2, '0') + ', tap to reveal prompt');
 
-    const p = prompts[idx];
-    frameIndexEl.textContent = 'FRAME ' + String(idx + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
-    frameContentEl.innerHTML =
-      '<p class="frame-title">' + escapeHtml(p.title) + '</p>' +
-      '<p class="frame-prompt">' + escapeHtml(p.text) + '</p>';
+    card.innerHTML =
+      '<div class="flip-inner">' +
+        '<div class="flip-face flip-front">' +
+          '<span class="frame-number">' + String(index + 1).padStart(2, '0') + '</span>' +
+          '<span class="frame-tap">tap to develop</span>' +
+        '</div>' +
+        '<div class="flip-face flip-back">' +
+          '<p class="back-index">FRAME ' + String(index + 1).padStart(2, '0') + '</p>' +
+          '<p class="back-title">' + escapeHtml(p.title) + '</p>' +
+          '<p class="back-text">' + escapeHtml(p.text) + '</p>' +
+        '</div>' +
+      '</div>';
 
-    frameEl.classList.remove('developing');
-    void frameEl.offsetWidth; // restart animation
-    frameEl.classList.add('developing');
+    card.addEventListener('click', () => toggleCard(card, index));
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleCard(card, index);
+      }
+    });
 
-    resultActionsEl.classList.add('visible');
-
-    buildFilmstrip();
-    updateStatus();
+    return card;
   }
 
-  function resetRoll() {
-    remaining = [...Array(total).keys()];
-    currentIndex = null;
-    frameIndexEl.textContent = '';
-    frameContentEl.innerHTML = '<p class="frame-empty">No frame exposed yet.</p>';
-    frameEl.classList.remove('developing');
-    resultActionsEl.classList.remove('visible');
-    buildFilmstrip();
-    updateStatus();
+  function buildFrames() {
+    framesScrollEl.innerHTML = '';
+    prompts.forEach((_, index) => {
+      const card = makeCard(index);
+      if (flippedOrder.includes(index)) card.classList.add('flipped');
+      framesScrollEl.appendChild(card);
+    });
+  }
+
+  function toggleCard(card, index) {
+    const isFlipped = card.classList.toggle('flipped');
+    flippedOrder = flippedOrder.filter((i) => i !== index);
+    if (isFlipped) {
+      flippedOrder.push(index);
+      activeIndex = index;
+    } else {
+      activeIndex = flippedOrder.length ? flippedOrder[flippedOrder.length - 1] : null;
+    }
+    updateActions();
+  }
+
+  function updateActions() {
+    resultActionsEl.classList.toggle('visible', activeIndex !== null);
   }
 
   function currentPromptText() {
-    if (currentIndex === null) return null;
-    const p = prompts[currentIndex];
+    if (activeIndex === null) return null;
+    const p = prompts[activeIndex];
     return {
-      label: 'Frame ' + String(currentIndex + 1).padStart(2, '0') + ' of ' + String(total).padStart(2, '0'),
+      label: 'Frame ' + String(activeIndex + 1).padStart(2, '0') + ' of ' + String(prompts.length).padStart(2, '0'),
       title: p.title,
       body: p.text
     };
+  }
+
+  function resetRoll() {
+    flippedOrder = [];
+    activeIndex = null;
+    buildFrames();
+    updateActions();
   }
 
   function wrapText(ctx, text, maxWidth) {
@@ -586,7 +549,7 @@
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
     link.href = dataUrl;
-    link.download = 'photo-walk-frame-' + String(currentIndex + 1).padStart(2, '0') + '.png';
+    link.download = 'photo-walk-frame-' + String(activeIndex + 1).padStart(2, '0') + '.png';
     link.click();
   }
 
@@ -611,20 +574,16 @@
     const text = promptTextEl.value.trim();
     if (!title || !text) return;
 
+    const index = prompts.length;
     prompts.push({ title, text });
-    remaining.push(total);
-    total += 1;
+    framesScrollEl.appendChild(makeCard(index));
 
     promptTitleEl.value = '';
     promptTextEl.value = '';
-    addStatusEl.textContent = 'added — now ' + total + ' frames on the roll';
+    addStatusEl.textContent = 'added — now ' + prompts.length + ' frames on the roll';
     promptTitleEl.focus();
-
-    buildFilmstrip();
-    updateStatus();
   }
 
-  drawBtn.addEventListener('click', drawFrame);
   resetBtn.addEventListener('click', resetRoll);
   saveBtn.addEventListener('click', saveFrame);
   emailBtn.addEventListener('click', emailFrame);
@@ -636,8 +595,8 @@
   });
   addForm.addEventListener('submit', addPrompt);
 
-  buildFilmstrip();
-  updateStatus();
+  buildFrames();
+  updateActions();
 </script>
 
 </body>
