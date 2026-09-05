@@ -412,6 +412,12 @@
       padding: 32px 24px;
     }
     .modal-title { font-size: 24px; }
+    .modal-image {
+      margin: -32px -24px 20px;
+      width: calc(100% + 48px);
+      max-height: 42vh;
+      flex-shrink: 0;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -475,15 +481,15 @@
   // `image` is optional — a URL to a reference photo shown at the top of
   // the enlarged frame. Leave it unset for a text-only prompt.
   const prompts = [
-    { title: "Ground as Composition", text: "Shoot straight down. Find a group of people on a textured or patterned surface and let the ground become the composition." },
-    { title: "Pure Geometry", text: "Find a staircase, ramp, or scaffold and shoot it as pure geometry — no horizon, no sky, just lines and light." },
-    { title: "Reflections Over Objects", text: "Photograph transparent things stacked or overlapping until the reflections matter more than the objects." },
-    { title: "Portrait by Reflection", text: "A portrait made entirely through a reflection — mirror, window, spoon — where the reflection distorts or doubles the person." },
-    { title: "The Shadow is the Subject", text: "Light a small object so its shadow becomes stranger or more interesting than the object itself." },
-    { title: "Scale That Doesn't Add Up", text: "Find something whose scale doesn't make sense in its surroundings — too big, too small, or floating." },
-    { title: "Camouflaged Figure", text: "Camouflage a person into a repeating pattern or material until you have to look twice to find them." },
-    { title: "Rotate the Ordinary", text: "Take a completely ordinary scene and rotate your framing 90°. Compose for the tilt, don't just tilt your head." },
-    { title: "Text as Object", text: "Find something that reads like a menu, label, or invitation — an everyday piece of text-as-object — and make it the whole photo." }
+    { title: "Ground as Composition", text: "Shoot straight down. Find a group of people on a textured or patterned surface and let the ground become the composition.", image: "photo-walk-images/01-ground-as-composition.jpg" },
+    { title: "Pure Geometry", text: "Find a staircase, ramp, or scaffold and shoot it as pure geometry — no horizon, no sky, just lines and light.", image: "photo-walk-images/02-pure-geometry.jpg" },
+    { title: "Reflections Over Objects", text: "Photograph transparent things stacked or overlapping until the reflections matter more than the objects.", image: "photo-walk-images/03-reflections-over-objects.jpg" },
+    { title: "Portrait by Reflection", text: "A portrait made entirely through a reflection — mirror, window, spoon — where the reflection distorts or doubles the person.", image: "photo-walk-images/04-portrait-by-reflection.jpg" },
+    { title: "The Shadow is the Subject", text: "Light a small object so its shadow becomes stranger or more interesting than the object itself.", image: "photo-walk-images/05-shadow-is-the-subject.jpg" },
+    { title: "Scale That Doesn't Add Up", text: "Find something whose scale doesn't make sense in its surroundings — too big, too small, or floating.", image: "photo-walk-images/06-scale-that-doesnt-add-up.jpg" },
+    { title: "Camouflaged Figure", text: "Camouflage a person into a repeating pattern or material until you have to look twice to find them.", image: "photo-walk-images/07-camouflaged-figure.jpg" },
+    { title: "Rotate the Ordinary", text: "Take a completely ordinary scene and rotate your framing 90°. Compose for the tilt, don't just tilt your head.", image: "photo-walk-images/08-rotate-the-ordinary.jpg" },
+    { title: "Text as Object", text: "Find something that reads like a menu, label, or invitation — an everyday piece of text-as-object — and make it the whole photo.", image: "photo-walk-images/09-text-as-object.jpg" }
   ];
 
   let flippedOrder = []; // indices, most recently flipped last
