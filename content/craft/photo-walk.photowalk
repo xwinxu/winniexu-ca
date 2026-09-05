@@ -273,6 +273,77 @@
     padding-top: 16px;
   }
 
+  /* Add-prompt panel */
+  .add-panel {
+    margin-top: 40px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 20px;
+  }
+
+  .add-toggle {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 0;
+    cursor: pointer;
+  }
+  .add-toggle:hover { color: var(--ink); background: none; }
+
+  .add-form {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .add-form.open { display: flex; }
+
+  .add-form label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .add-form input,
+  .add-form textarea {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    resize: vertical;
+  }
+
+  .add-form textarea { min-height: 64px; }
+
+  .add-form input:focus,
+  .add-form textarea:focus {
+    outline: none;
+    border-color: var(--safelight);
+  }
+
+  .add-form .add-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .add-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--safelight);
+    letter-spacing: 0.02em;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .frame.developing .frame-title,
     .frame.developing .frame-prompt {
@@ -316,6 +387,20 @@
     <button class="reset-link" id="resetBtn">reload the roll</button>
   </footer>
 
+  <div class="add-panel">
+    <button class="add-toggle" id="addToggle">+ add a prompt to this roll</button>
+    <form class="add-form" id="addForm">
+      <label for="promptTitle">Title</label>
+      <input type="text" id="promptTitle" placeholder="e.g. Light Through Glass" maxlength="60" required>
+      <label for="promptText">Prompt</label>
+      <textarea id="promptText" placeholder="Describe the shot to look for." maxlength="240" required></textarea>
+      <div class="add-row">
+        <button type="submit" class="action-btn">Add to roll</button>
+        <span class="add-status" id="addStatus"></span>
+      </div>
+    </form>
+  </div>
+
 </div>
 
 <script>
@@ -331,7 +416,7 @@
     { title: "Text as Object", text: "Find something that reads like a menu, label, or invitation — an everyday piece of text-as-object — and make it the whole photo." }
   ];
 
-  const total = prompts.length;
+  let total = prompts.length;
   let remaining = [...Array(total).keys()];
   let currentIndex = null;
 
@@ -346,6 +431,11 @@
   const saveBtn = document.getElementById('saveBtn');
   const emailBtn = document.getElementById('emailBtn');
   const textBtn = document.getElementById('textBtn');
+  const addToggle = document.getElementById('addToggle');
+  const addForm = document.getElementById('addForm');
+  const promptTitleEl = document.getElementById('promptTitle');
+  const promptTextEl = document.getElementById('promptText');
+  const addStatusEl = document.getElementById('addStatus');
 
   function buildFilmstrip() {
     filmstripEl.innerHTML = '';
@@ -383,6 +473,12 @@
     }
   }
 
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   function drawFrame() {
     if (remaining.length === 0) return;
     const pick = Math.floor(Math.random() * remaining.length);
@@ -393,8 +489,8 @@
     const p = prompts[idx];
     frameIndexEl.textContent = 'FRAME ' + String(idx + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
     frameContentEl.innerHTML =
-      '<p class="frame-title">' + p.title + '</p>' +
-      '<p class="frame-prompt">' + p.text + '</p>';
+      '<p class="frame-title">' + escapeHtml(p.title) + '</p>' +
+      '<p class="frame-prompt">' + escapeHtml(p.text) + '</p>';
 
     frameEl.classList.remove('developing');
     void frameEl.offsetWidth; // restart animation
@@ -509,11 +605,36 @@
     window.location.href = 'sms:?&body=' + encodeURIComponent(body);
   }
 
+  function addPrompt(event) {
+    event.preventDefault();
+    const title = promptTitleEl.value.trim();
+    const text = promptTextEl.value.trim();
+    if (!title || !text) return;
+
+    prompts.push({ title, text });
+    remaining.push(total);
+    total += 1;
+
+    promptTitleEl.value = '';
+    promptTextEl.value = '';
+    addStatusEl.textContent = 'added — now ' + total + ' frames on the roll';
+    promptTitleEl.focus();
+
+    buildFilmstrip();
+    updateStatus();
+  }
+
   drawBtn.addEventListener('click', drawFrame);
   resetBtn.addEventListener('click', resetRoll);
   saveBtn.addEventListener('click', saveFrame);
   emailBtn.addEventListener('click', emailFrame);
   textBtn.addEventListener('click', textFrame);
+  addToggle.addEventListener('click', () => {
+    const open = addForm.classList.toggle('open');
+    addToggle.textContent = open ? '– add a prompt to this roll' : '+ add a prompt to this roll';
+    if (open) promptTitleEl.focus();
+  });
+  addForm.addEventListener('submit', addPrompt);
 
   buildFilmstrip();
   updateStatus();
