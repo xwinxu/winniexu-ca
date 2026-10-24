@@ -12,32 +12,70 @@
     <span>Confucius Says</span>
   </div>
   <h1>Staff view</h1>
-  <p class="sub">Confirm payments as they come in on Venmo, then run the drink queue.</p>
 
-  <div class="card">
-    <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
-    <p class="sub" style="margin:0 0 8px">Set total cups available per drink. Guests see a "running low" flag once under 10% of the total remains.</p>
-    <div class="inventory-grid" id="inventory-grid"></div>
+  <div class="card" id="gate">
+    <p class="sub" style="margin:0 0 8px">Enter the staff password to continue.</p>
+    <input type="password" id="gate-password" placeholder="Password" />
+    <button class="primary" id="gate-submit">Enter</button>
+    <p class="sub" id="gate-error" style="color:#e4a0a0;margin:8px 0 0" hidden>Wrong password, try again.</p>
   </div>
 
-  <div class="card">
-    <h2 style="margin:0 0 8px;font-size:1.05rem">Awaiting payment</h2>
-    <p class="sub" style="margin:0 0 8px">Match the order number in the Venmo note, then confirm.</p>
-    <ul class="queue-list" id="awaiting-list"></ul>
-  </div>
+  <div id="staff-content" hidden>
+    <p class="sub">Confirm payments as they come in on Venmo, then run the drink queue.</p>
 
-  <div class="card">
-    <h2 style="margin:0 0 8px;font-size:1.05rem">Preparing</h2>
-    <ul class="queue-list" id="preparing-list"></ul>
-  </div>
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
+      <p class="sub" style="margin:0 0 8px">Set total cups available per drink. Guests see a "running low" flag once under 10% of the total remains.</p>
+      <div class="inventory-grid" id="inventory-grid"></div>
+    </div>
 
-  <div class="card">
-    <h2 style="margin:0 0 8px;font-size:1.05rem">Ready for pickup</h2>
-    <ul class="queue-list" id="ready-list"></ul>
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Awaiting payment</h2>
+      <p class="sub" style="margin:0 0 8px">Match the order number in the Venmo note, then confirm.</p>
+      <ul class="queue-list" id="awaiting-list"></ul>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Preparing</h2>
+      <ul class="queue-list" id="preparing-list"></ul>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Ready for pickup</h2>
+      <ul class="queue-list" id="ready-list"></ul>
+    </div>
   </div>
 
   <script src="config.js"></script>
   <script>
+    const STAFF_PASSWORD = "slaytea";
+    const STAFF_TOKEN_KEY = "cafe_staff_token";
+
+    function authHeaders() {
+      return { "x-staff-password": sessionStorage.getItem(STAFF_TOKEN_KEY) || "" };
+    }
+
+    function showStaffContent() {
+      document.getElementById("gate").hidden = true;
+      document.getElementById("staff-content").hidden = false;
+      refresh();
+      setInterval(refresh, 3000);
+    }
+
+    document.getElementById("gate-submit").addEventListener("click", () => {
+      const input = document.getElementById("gate-password");
+      if (input.value === STAFF_PASSWORD) {
+        sessionStorage.setItem(STAFF_TOKEN_KEY, STAFF_PASSWORD);
+        showStaffContent();
+      } else {
+        document.getElementById("gate-error").hidden = false;
+      }
+    });
+
+    document.getElementById("gate-password").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("gate-submit").click();
+    });
+
     function renderInventory(inventory) {
       const grid = document.getElementById("inventory-grid");
       grid.innerHTML = window.CAFE_CONFIG.drinks
@@ -56,7 +94,7 @@
     async function saveInventory(key, total) {
       await fetch("/api/inventory", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...authHeaders() },
         body: JSON.stringify({ drink: key, total }),
       });
     }
@@ -133,14 +171,15 @@
       btn.disabled = true;
       const { id, action } = btn.dataset;
       try {
-        await fetch(`/api/orders/${id}/${action}`, { method: "POST" });
+        await fetch(`/api/orders/${id}/${action}`, { method: "POST", headers: authHeaders() });
       } finally {
         refresh();
       }
     });
 
-    refresh();
-    setInterval(refresh, 3000);
+    if (sessionStorage.getItem(STAFF_TOKEN_KEY) === STAFF_PASSWORD) {
+      showStaffContent();
+    }
   </script>
 </body>
 </html>

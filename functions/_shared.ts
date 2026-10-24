@@ -32,6 +32,12 @@ export interface InventoryEntry {
   remaining: number | null;
 }
 
+export const STAFF_PASSWORD = "slaytea";
+
+export function isStaffAuthed(request: Request): boolean {
+  return request.headers.get("x-staff-password") === STAFF_PASSWORD;
+}
+
 export async function listOrders(kv: KVNamespace): Promise<Order[]> {
   const list = await kv.list({ prefix: "order:" });
   return Promise.all(list.keys.map(async (k) => JSON.parse((await kv.get(k.name)) as string)));
