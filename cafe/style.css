@@ -1,22 +1,11 @@
 :root {
-  color-scheme: light dark;
-  --bg: #fafaf8;
-  --fg: #1a1a1a;
-  --muted: #6b6b6b;
-  --accent: #0f6b4c;
-  --card: #ffffff;
-  --border: #e3e0d8;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15161a;
-    --fg: #f0efe9;
-    --muted: #9a9a9a;
-    --accent: #3ddc97;
-    --card: #1f2024;
-    --border: #2d2e33;
-  }
+  color-scheme: dark;
+  --bg: #2b1710;
+  --fg: #ecdfd0;
+  --muted: #b89a84;
+  --accent: #a9cfe4;
+  --card: #3d2217;
+  --border: #5c3a27;
 }
 
 * {
@@ -31,9 +20,30 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.brand img {
+  height: 32px;
+  width: 32px;
+}
+
+.brand span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 h1 {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   margin: 0 0 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .sub {
@@ -71,12 +81,84 @@ button:active {
   margin-bottom: 16px;
 }
 
-.drink-grid button.selected {
+.drink-card {
+  position: relative;
+  padding: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.drink-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.drink-card.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent) inset;
 }
 
-input[type="text"] {
+.drink-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.price-pill {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: var(--accent);
+  color: #2b1710;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.low-badge,
+.sold-out-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.low-badge {
+  color: #2b1710;
+  background: var(--accent);
+}
+
+.sold-out-badge {
+  color: var(--fg);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.qty-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #2b1710;
+  font-weight: 700;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+input[type="text"],
+input[type="number"] {
   width: 100%;
   font-size: 1rem;
   padding: 12px;
@@ -90,7 +172,7 @@ input[type="text"] {
 .primary {
   width: 100%;
   background: var(--accent);
-  color: #06241a;
+  color: #2b1710;
   border: none;
   font-weight: 600;
   padding: 16px;
@@ -143,4 +225,32 @@ input[type="text"] {
   color: var(--muted);
   font-style: italic;
   padding: 8px 0;
+}
+
+.inventory-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inventory-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.inventory-row .name {
+  font-size: 0.9rem;
+}
+
+.inventory-row .remaining {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.inventory-row input[type="number"] {
+  margin: 0;
+  width: 80px;
 }

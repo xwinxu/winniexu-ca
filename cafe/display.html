@@ -96,7 +96,17 @@
     </div>
   </div>
 
+  <script src="config.js"></script>
   <script>
+    function drinkCode(order) {
+      return window.CAFE_CONFIG.drinks
+        .map((d) => {
+          const item = order.items.find((i) => i.drinkKey === d.key);
+          return item ? item.qty : 0;
+        })
+        .join(".");
+    }
+
     async function refresh() {
       try {
         const res = await fetch("/api/queue");
@@ -106,11 +116,11 @@
         const prepEl = document.getElementById("preparing");
         prepEl.innerHTML = preparing.length
           ? preparing
-              .map(
-                (o) => `
+              .map((o) => {
+                return `
             <div class="preparing-number">#${o.number}</div>
-            <div class="preparing-drink">${o.drinkName}</div>`,
-              )
+            <div class="preparing-drink">${drinkCode(o)} ${o.customerName}</div>`;
+              })
               .join("")
           : `<p class="empty">No orders in progress</p>`;
 

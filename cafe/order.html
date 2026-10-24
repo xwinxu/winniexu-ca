@@ -7,48 +7,157 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="brand">
+    <img src="assets/logo-mark.png" alt="" />
+    <span>Confucius Says</span>
+  </div>
   <div id="app"></div>
 
   <script src="config.js"></script>
   <script>
     const STORAGE_KEY = "cafe_order_id";
     const app = document.getElementById("app");
+    const LOW_STOCK_RATIO = 0.1; // flag "running low" once remaining stock is at or under 10% of total
 
-    function renderForm() {
+    async function fetchInventory() {
+      try {
+        const res = await fetch("/api/inventory");
+        if (!res.ok) return {};
+        return await res.json();
+      } catch (_) {
+        return {};
+      }
+    }
+
+    async function renderForm() {
       const { drinks } = window.CAFE_CONFIG;
+      const inventory = await fetchInventory();
+      const cart = {}; // drinkKey -> qty
+
       app.innerHTML = `
         <h1>What are you having?</h1>
-        <p class="sub">Pick a drink, enter your name, then pay via Venmo.</p>
+        <p class="sub">Tap a drink to add it &mdash; tap again to add more.</p>
         <div class="drink-grid" id="drink-grid">
           ${drinks
-            .map(
-              (d) => `
-            <button type="button" data-key="${d.key}">
-              ${d.name}<br/><span style="color:var(--muted);font-size:0.85rem">$${d.price.toFixed(2)}</span>
-            </button>`,
-            )
+            .map((d) => {
+              const stock = inventory[d.key];
+              const soldOut = stock && stock.remaining !== null && stock.remaining <= 0;
+              const low =
+                !soldOut &&
+                stock &&
+                stock.remaining !== null &&
+                stock.total !== null &&
+                stock.total > 0 &&
+                stock.remaining / stock.total <= LOW_STOCK_RATIO;
+              return `
+            <button type="button" class="drink-card" data-key="${d.key}" ${soldOut ? "disabled" : ""}>
+              <img src="assets/drinks/${d.key}.png" alt="${d.name}" />
+              <span class="price-pill">$${d.price.toFixed(2)}</span>
+              ${soldOut ? `<span class="sold-out-badge">Sold out</span>` : ""}
+              ${low ? `<span class="low-badge">Running low</span>` : ""}
+              <span class="qty-badge" hidden>0</span>
+            </button>`;
+            })
             .join("")}
+        </div>
+        <div class="card" id="cart-summary" hidden>
+          <p class="sub" style="margin:0 0 8px">Your order</p>
+          <ul class="queue-list" id="cart-lines"></ul>
+          <p style="text-align:right;margin:12px 0 0;font-weight:700" id="cart-total"></p>
         </div>
         <input type="text" id="name" placeholder="Your name" />
         <button class="primary" id="submit" disabled>Place order</button>
       `;
 
-      let selected = null;
       const grid = document.getElementById("drink-grid");
       const submitBtn = document.getElementById("submit");
       const nameInput = document.getElementById("name");
+      const cartSummary = document.getElementById("cart-summary");
+      const cartLines = document.getElementById("cart-lines");
+      const cartTotal = document.getElementById("cart-total");
 
-      function updateSubmit() {
-        submitBtn.disabled = !selected || !nameInput.value.trim();
+      function totalQty() {
+        return Object.values(cart).reduce((sum, q) => sum + q, 0);
       }
 
-      grid.querySelectorAll("button").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          grid.querySelectorAll("button").forEach((b) => b.classList.remove("selected"));
-          btn.classList.add("selected");
-          selected = btn.dataset.key;
-          updateSubmit();
+      function stockCap(key) {
+        const stock = inventory[key];
+        return stock && stock.remaining !== null ? stock.remaining : Infinity;
+      }
+
+      function setQty(key, qty) {
+        const clamped = Math.max(0, Math.min(qty, stockCap(key)));
+        if (clamped === 0) {
+          delete cart[key];
+        } else {
+          cart[key] = clamped;
+        }
+        renderCart();
+        updateSubmit();
+        return clamped;
+      }
+
+      function renderCart() {
+        const entries = Object.entries(cart).filter(([, qty]) => qty > 0);
+        cartSummary.hidden = entries.length === 0;
+        cartLines.innerHTML = entries
+          .map(([key, qty]) => {
+            const d = drinks.find((d) => d.key === key);
+            return `
+          <li>
+            <div class="meta">
+              <span class="n">${d.name}</span>
+              <span class="d">$${(d.price * qty).toFixed(2)}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="number" min="0" inputmode="numeric" class="cart-qty" data-key="${key}" value="${qty}" style="width:60px;margin:0" />
+              <button type="button" class="cart-remove" data-key="${key}" aria-label="Remove">&times;</button>
+            </div>
+          </li>`;
+          })
+          .join("");
+        const total = entries.reduce((sum, [key, qty]) => {
+          const d = drinks.find((d) => d.key === key);
+          return sum + d.price * qty;
+        }, 0);
+        cartTotal.textContent = `Total: $${total.toFixed(2)}`;
+
+        grid.querySelectorAll(".drink-card").forEach((btn) => {
+          const qty = cart[btn.dataset.key] || 0;
+          const badge = btn.querySelector(".qty-badge");
+          badge.hidden = qty === 0;
+          badge.textContent = qty;
+          btn.classList.toggle("selected", qty > 0);
         });
+      }
+
+      function updateSubmit() {
+        submitBtn.disabled = totalQty() === 0 || !nameInput.value.trim();
+      }
+
+      grid.querySelectorAll(".drink-card:not(:disabled)").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const key = btn.dataset.key;
+          setQty(key, (cart[key] || 0) + 1);
+        });
+      });
+
+      cartLines.addEventListener("change", (e) => {
+        const input = e.target.closest(".cart-qty");
+        if (!input) return;
+        const qty = parseInt(input.value, 10);
+        const clamped = setQty(input.dataset.key, Number.isNaN(qty) ? 0 : qty);
+        if (clamped !== qty) {
+          // reflect any clamping (e.g. typed more than remaining stock) back into the field
+          const refreshed = cartLines.querySelector(`.cart-qty[data-key="${input.dataset.key}"]`);
+          if (refreshed) refreshed.value = clamped;
+        }
+      });
+
+      cartLines.addEventListener("click", (e) => {
+        const btn = e.target.closest(".cart-remove");
+        if (!btn) return;
+        setQty(btn.dataset.key, 0);
       });
 
       nameInput.addEventListener("input", updateSubmit);
@@ -57,11 +166,19 @@
         submitBtn.disabled = true;
         submitBtn.textContent = "Placing order...";
         try {
+          const items = Object.entries(cart)
+            .filter(([, qty]) => qty > 0)
+            .map(([drink, qty]) => ({ drink, qty }));
           const res = await fetch("/api/orders", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ drink: selected, name: nameInput.value.trim() }),
+            body: JSON.stringify({ items, name: nameInput.value.trim() }),
           });
+          if (res.status === 409) {
+            alert("Sorry, one of your drinks just sold out. Please adjust your order.");
+            renderForm();
+            return;
+          }
           if (!res.ok) throw new Error(await res.text());
           const order = await res.json();
           localStorage.setItem(STORAGE_KEY, order.id);
@@ -74,9 +191,13 @@
       });
     }
 
+    function itemsSummary(order) {
+      return order.items.map((i) => `${i.qty}x ${i.drinkName}`).join(", ");
+    }
+
     function venmoLinks(order) {
       const { venmoUsername } = window.CAFE_CONFIG;
-      const note = encodeURIComponent(`Order #${order.number} - ${order.drinkName}`);
+      const note = encodeURIComponent(`Order #${order.number} - ${itemsSummary(order)}`);
       const amount = order.amount.toFixed(2);
       return {
         app: `venmo://paycharge?txn=pay&recipients=${venmoUsername}&amount=${amount}&note=${note}`,
@@ -84,17 +205,42 @@
       };
     }
 
+    function isMobile() {
+      return /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+    }
+
+    // Tries the Venmo app deep link; if the browser is still in the foreground
+    // after a beat (app not installed / didn't open), falls back to venmo.com.
+    function openVenmo(links) {
+      if (!isMobile()) {
+        window.open(links.web, "_blank");
+        return;
+      }
+      let appOpened = false;
+      const onVisibilityChange = () => {
+        if (document.hidden) appOpened = true;
+      };
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      window.location.href = links.app;
+      setTimeout(() => {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+        if (!appOpened) {
+          window.location.href = links.web;
+        }
+      }, 1500);
+    }
+
     function renderPay(order) {
       const links = venmoLinks(order);
       app.innerHTML = `
         <h1>Order #${order.number}</h1>
-        <p class="sub">${order.drinkName} for ${order.customerName} &middot; $${order.amount.toFixed(2)}</p>
+        <p class="sub">${itemsSummary(order)} for ${order.customerName} &middot; $${order.amount.toFixed(2)}</p>
         <div class="card">
           <p>Tap below to pay in the Venmo app. Use the note we filled in so we can match your payment.</p>
           <p style="margin-top:4px"><strong>Note: Order #${order.number}</strong></p>
-          <a href="${links.app}" class="primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;box-sizing:border-box">
+          <button type="button" id="venmo-pay" class="primary" style="margin-top:12px">
             Pay with Venmo
-          </a>
+          </button>
           <a href="${links.web}" style="display:block;text-align:center;margin-top:8px;font-size:0.85rem;color:var(--muted)">
             Don't have the app? Pay on venmo.com
           </a>
@@ -104,13 +250,14 @@
           <p id="status-text">Waiting for payment confirmation...</p>
         </div>
       `;
+      document.getElementById("venmo-pay").addEventListener("click", () => openVenmo(links));
       pollStatus(order.id);
     }
 
     function renderQueued(order) {
       app.innerHTML = `
         <h1>You're in the queue!</h1>
-        <p class="sub">${order.drinkName} for ${order.customerName}</p>
+        <p class="sub">${itemsSummary(order)} for ${order.customerName}</p>
         <div class="card" style="text-align:center">
           <p class="sub">Your number</p>
           <div class="number">#${order.number}</div>

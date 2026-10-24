@@ -29,7 +29,7 @@ jobs:
         run: npx quartz build
 
       - name: Copy cafe app into build output
-        run: mkdir -p public/cafe && cp -r cafe/* public/cafe/
+        run: mkdir -p public/cafe && rsync -a --exclude='*.pdf' cafe/ public/cafe/
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

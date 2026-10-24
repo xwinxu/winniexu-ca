@@ -7,8 +7,18 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="brand">
+    <img src="assets/logo-mark.png" alt="" />
+    <span>Confucius Says</span>
+  </div>
   <h1>Staff view</h1>
   <p class="sub">Confirm payments as they come in on Venmo, then run the drink queue.</p>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
+    <p class="sub" style="margin:0 0 8px">Set total cups available per drink. Guests see a "running low" flag once under 10% of the total remains.</p>
+    <div class="inventory-grid" id="inventory-grid"></div>
+  </div>
 
   <div class="card">
     <h2 style="margin:0 0 8px;font-size:1.05rem">Awaiting payment</h2>
@@ -26,34 +36,92 @@
     <ul class="queue-list" id="ready-list"></ul>
   </div>
 
+  <script src="config.js"></script>
   <script>
-    function renderList(el, orders, actionLabel, action) {
+    function renderInventory(inventory) {
+      const grid = document.getElementById("inventory-grid");
+      grid.innerHTML = window.CAFE_CONFIG.drinks
+        .map((d) => {
+          const stock = inventory[d.key] || { total: null, remaining: null };
+          return `
+        <div class="inventory-row">
+          <span class="name">${d.name}</span>
+          <span class="remaining">${stock.remaining === null ? "no limit set" : `${stock.remaining} left`}</span>
+          <input type="number" min="0" data-key="${d.key}" placeholder="total" value="${stock.total ?? ""}" />
+        </div>`;
+        })
+        .join("");
+    }
+
+    async function saveInventory(key, total) {
+      await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ drink: key, total }),
+      });
+    }
+
+    document.getElementById("inventory-grid").addEventListener(
+      "change",
+      (e) => {
+        const input = e.target.closest("input[data-key]");
+        if (!input) return;
+        const total = parseInt(input.value, 10);
+        if (Number.isNaN(total) || total < 0) return;
+        saveInventory(input.dataset.key, total).then(refresh);
+      },
+      true,
+    );
+
+    // "1.0.2.0" = quantities of each menu drink in config order (0 if none ordered)
+    function drinkCode(order) {
+      return window.CAFE_CONFIG.drinks
+        .map((d) => {
+          const item = order.items.find((i) => i.drinkKey === d.key);
+          return item ? item.qty : 0;
+        })
+        .join(".");
+    }
+
+    function renderList(el, orders, actionLabel, action, useDrinkCode) {
       if (orders.length === 0) {
         el.innerHTML = `<li class="empty">Nothing here</li>`;
         return;
       }
       el.innerHTML = orders
-        .map(
-          (o) => `
+        .map((o) => {
+          const label = useDrinkCode
+            ? `${drinkCode(o)} ${o.customerName}`
+            : `#${o.number} &mdash; ${o.items.map((i) => `${i.qty}x ${i.drinkName}`).join(", ")}`;
+          const sub = useDrinkCode
+            ? `#${o.number} &middot; $${o.amount.toFixed(2)}`
+            : `${o.customerName} &middot; $${o.amount.toFixed(2)}`;
+          return `
         <li>
           <div class="meta">
-            <span class="n">#${o.number} &mdash; ${o.drinkName}</span>
-            <span class="d">${o.customerName} &middot; $${o.amount.toFixed(2)}</span>
+            <span class="n">${label}</span>
+            <span class="d">${sub}</span>
           </div>
           <button data-id="${o.id}" data-action="${action}">${actionLabel}</button>
-        </li>`,
-        )
+        </li>`;
+        })
         .join("");
     }
 
     async function refresh() {
       try {
-        const res = await fetch("/api/queue");
-        if (!res.ok) return;
-        const { awaitingPayment, preparing, ready } = await res.json();
-        renderList(document.getElementById("awaiting-list"), awaitingPayment, "Confirm paid", "confirm-payment");
-        renderList(document.getElementById("preparing-list"), preparing, "Mark ready", "advance");
-        renderList(document.getElementById("ready-list"), ready, "Picked up", "advance");
+        const [queueRes, inventoryRes] = await Promise.all([fetch("/api/queue"), fetch("/api/inventory")]);
+        if (queueRes.ok) {
+          const { awaitingPayment, preparing, ready } = await queueRes.json();
+          renderList(document.getElementById("awaiting-list"), awaitingPayment, "Confirm paid", "confirm-payment");
+          renderList(document.getElementById("preparing-list"), preparing, "Mark ready", "advance", true);
+          renderList(document.getElementById("ready-list"), ready, "Picked up", "advance");
+        }
+        const inventoryGrid = document.getElementById("inventory-grid");
+        const editingInput = inventoryGrid.contains(document.activeElement) ? document.activeElement : null;
+        if (inventoryRes.ok && !editingInput) {
+          renderInventory(await inventoryRes.json());
+        }
       } catch (_) {
         // ignore transient network errors
       }
