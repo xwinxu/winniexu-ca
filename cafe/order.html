@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app"></div>
+
+  <script src="config.js"></script>
+  <script>
+    const STORAGE_KEY = "cafe_order_id";
+    const app = document.getElementById("app");
+
+    function renderForm() {
+      const { drinks } = window.CAFE_CONFIG;
+      app.innerHTML = `
+        <h1>What are you having?</h1>
+        <p class="sub">Pick a drink, enter your name, then pay via Venmo.</p>
+        <div class="drink-grid" id="drink-grid">
+          ${drinks
+            .map(
+              (d) => `
+            <button type="button" data-key="${d.key}">
+              ${d.name}<br/><span style="color:var(--muted);font-size:0.85rem">$${d.price.toFixed(2)}</span>
+            </button>`,
+            )
+            .join("")}
+        </div>
+        <input type="text" id="name" placeholder="Your name" />
+        <button class="primary" id="submit" disabled>Place order</button>
+      `;
+
+      let selected = null;
+      const grid = document.getElementById("drink-grid");
+      const submitBtn = document.getElementById("submit");
+      const nameInput = document.getElementById("name");
+
+      function updateSubmit() {
+        submitBtn.disabled = !selected || !nameInput.value.trim();
+      }
+
+      grid.querySelectorAll("button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          grid.querySelectorAll("button").forEach((b) => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          selected = btn.dataset.key;
+          updateSubmit();
+        });
+      });
+
+      nameInput.addEventListener("input", updateSubmit);
+
+      submitBtn.addEventListener("click", async () => {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Placing order...";
+        try {
+          const res = await fetch("/api/orders", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ drink: selected, name: nameInput.value.trim() }),
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const order = await res.json();
+          localStorage.setItem(STORAGE_KEY, order.id);
+          renderPay(order);
+        } catch (err) {
+          alert("Something went wrong placing your order. Please try again.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Place order";
+        }
+      });
+    }
+
+    function venmoLinks(order) {
+      const { venmoUsername } = window.CAFE_CONFIG;
+      const note = encodeURIComponent(`Order #${order.number} - ${order.drinkName}`);
+      const amount = order.amount.toFixed(2);
+      return {
+        app: `venmo://paycharge?txn=pay&recipients=${venmoUsername}&amount=${amount}&note=${note}`,
+        web: `https://venmo.com/${venmoUsername}?txn=pay&amount=${amount}&note=${note}`,
+      };
+    }
+
+    function renderPay(order) {
+      const links = venmoLinks(order);
+      app.innerHTML = `
+        <h1>Order #${order.number}</h1>
+        <p class="sub">${order.drinkName} for ${order.customerName} &middot; $${order.amount.toFixed(2)}</p>
+        <div class="card">
+          <p>Tap below to pay in the Venmo app. Use the note we filled in so we can match your payment.</p>
+          <p style="margin-top:4px"><strong>Note: Order #${order.number}</strong></p>
+          <a href="${links.app}" class="primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;box-sizing:border-box">
+            Pay with Venmo
+          </a>
+          <a href="${links.web}" style="display:block;text-align:center;margin-top:8px;font-size:0.85rem;color:var(--muted)">
+            Don't have the app? Pay on venmo.com
+          </a>
+        </div>
+        <div class="card" id="status-card">
+          <p class="sub" style="margin-bottom:4px">Status</p>
+          <p id="status-text">Waiting for payment confirmation...</p>
+        </div>
+      `;
+      pollStatus(order.id);
+    }
+
+    function renderQueued(order) {
+      app.innerHTML = `
+        <h1>You're in the queue!</h1>
+        <p class="sub">${order.drinkName} for ${order.customerName}</p>
+        <div class="card" style="text-align:center">
+          <p class="sub">Your number</p>
+          <div class="number">#${order.number}</div>
+          <p class="sub" id="live-status">Being prepared...</p>
+        </div>
+        <button id="new-order" style="width:100%;margin-top:8px">Place another order</button>
+      `;
+      document.getElementById("new-order").addEventListener("click", () => {
+        localStorage.removeItem(STORAGE_KEY);
+        renderForm();
+      });
+      pollStatus(order.id, true);
+    }
+
+    let pollTimer = null;
+    async function pollStatus(id, alreadyQueued) {
+      if (pollTimer) clearTimeout(pollTimer);
+      try {
+        const res = await fetch(`/api/orders/${id}`);
+        if (res.ok) {
+          const order = await res.json();
+          if (!alreadyQueued && order.status !== "awaiting_payment") {
+            renderQueued(order);
+            return;
+          }
+          if (alreadyQueued) {
+            const liveStatus = document.getElementById("live-status");
+            if (liveStatus) {
+              liveStatus.textContent =
+                order.status === "ready"
+                  ? "Ready for pickup!"
+                  : order.status === "picked_up"
+                  ? "Picked up. Thanks!"
+                  : "Being prepared...";
+            }
+          }
+        }
+      } catch (_) {
+        // ignore transient network errors, keep polling
+      }
+      pollTimer = setTimeout(() => pollStatus(id, alreadyQueued), 3000);
+    }
+
+    // Resume in-progress order on page reload
+    const existingId = localStorage.getItem(STORAGE_KEY);
+    if (existingId) {
+      fetch(`/api/orders/${existingId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((order) => {
+          if (!order) {
+            renderForm();
+          } else if (order.status === "awaiting_payment") {
+            renderPay(order);
+          } else {
+            renderQueued(order);
+          }
+        })
+        .catch(() => renderForm());
+    } else {
+      renderForm();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+name = "winniexu-ca"
+pages_build_output_dir = "public"
+compatibility_date = "2026-06-23"
+
+[[kv_namespaces]]
+binding = "ORDERS_KV"
+id = "c82869f121ac4ee6a847e94e994eb4df"

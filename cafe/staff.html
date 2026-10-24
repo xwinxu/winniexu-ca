@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Staff</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Staff view</h1>
+  <p class="sub">Confirm payments as they come in on Venmo, then run the drink queue.</p>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px;font-size:1.05rem">Awaiting payment</h2>
+    <p class="sub" style="margin:0 0 8px">Match the order number in the Venmo note, then confirm.</p>
+    <ul class="queue-list" id="awaiting-list"></ul>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px;font-size:1.05rem">Preparing</h2>
+    <ul class="queue-list" id="preparing-list"></ul>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px;font-size:1.05rem">Ready for pickup</h2>
+    <ul class="queue-list" id="ready-list"></ul>
+  </div>
+
+  <script>
+    function renderList(el, orders, actionLabel, action) {
+      if (orders.length === 0) {
+        el.innerHTML = `<li class="empty">Nothing here</li>`;
+        return;
+      }
+      el.innerHTML = orders
+        .map(
+          (o) => `
+        <li>
+          <div class="meta">
+            <span class="n">#${o.number} &mdash; ${o.drinkName}</span>
+            <span class="d">${o.customerName} &middot; $${o.amount.toFixed(2)}</span>
+          </div>
+          <button data-id="${o.id}" data-action="${action}">${actionLabel}</button>
+        </li>`,
+        )
+        .join("");
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch("/api/queue");
+        if (!res.ok) return;
+        const { awaitingPayment, preparing, ready } = await res.json();
+        renderList(document.getElementById("awaiting-list"), awaitingPayment, "Confirm paid", "confirm-payment");
+        renderList(document.getElementById("preparing-list"), preparing, "Mark ready", "advance");
+        renderList(document.getElementById("ready-list"), ready, "Picked up", "advance");
+      } catch (_) {
+        // ignore transient network errors
+      }
+    }
+
+    document.body.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-id]");
+      if (!btn) return;
+      btn.disabled = true;
+      const { id, action } = btn.dataset;
+      try {
+        await fetch(`/api/orders/${id}/${action}`, { method: "POST" });
+      } finally {
+        refresh();
+      }
+    });
+
+    refresh();
+    setInterval(refresh, 3000);
+  </script>
+</body>
+</html>
