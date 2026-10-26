@@ -19,9 +19,7 @@
   <script>
     const STORAGE_KEY = "cafe_order_id";
     const app = document.getElementById("app");
-    const LOW_STOCK_RATIO = 0.1; // drinks: flag "running low" once remaining stock is at or under 10% of total
-    const DRINK_LOW_STOCK_MIN = 2; // drinks: also flag once remaining is this low in absolute terms (small totals round the ratio away)
-    const SLICE_LOW_STOCK_COUNT = 5; // slices: show the exact remaining count once at or under this
+    const SLICE_LOW_STOCK_COUNT = 5; // pairings: show the exact remaining count once at or under this
 
     async function fetchInventory() {
       try {
@@ -40,20 +38,14 @@
       return stock.remaining - cartQty;
     }
 
-    // Both badges anticipate what adding to cart will do to stock, not just what's left on the server:
-    // drinks flag "Running low" once your cart would push remaining at/under the ratio threshold;
-    // pairings show the exact number once your cart would push remaining at/under the count threshold.
-    // Either becomes "Sold out" once your cart would use up what's left.
+    // Anticipates what adding to cart will do to stock, not just what's left on the server.
+    // Drinks: no "running low" warning anymore, just "Sold out" once your cart would use up what's left.
+    // Pairings: show the exact number once your cart would push remaining at/under the count threshold.
     function stockBadgeHtml(stock, cartQty) {
       if (!stock || stock.total === null) return `<span class="sold-out-badge">Not available yet</span>`;
       const remaining = effectiveRemaining(stock, cartQty);
       if (remaining <= 0) return `<span class="sold-out-badge">Sold out (check with staff)</span>`;
       if (stock.section === "drinks") {
-        const ratioLow = stock.total > 0 && remaining / stock.total <= LOW_STOCK_RATIO;
-        const countLow = remaining <= DRINK_LOW_STOCK_MIN;
-        if (ratioLow || countLow) {
-          return `<span class="low-badge">Running low</span>`;
-        }
         return "";
       }
       if (remaining <= SLICE_LOW_STOCK_COUNT) {
