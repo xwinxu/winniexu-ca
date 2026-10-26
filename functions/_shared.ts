@@ -56,11 +56,38 @@ export function isStaffAuthed(request: Request): boolean {
   return request.headers.get("x-staff-password") === STAFF_PASSWORD;
 }
 
+const ORDER_IDS_KEY = "order_ids";
+
+// An explicit index of order ids, maintained on write. Every poll of the queue/
+// inventory/stats pages reads this, so it must never cost a kv.list() call —
+// Cloudflare's free tier allows only 1,000 list() ops/day, which a few people
+// polling every few seconds for a few hours burns through fast. get()/put()
+// have a far higher daily quota.
+export async function getOrderIds(kv: KVNamespace): Promise<string[]> {
+  const raw = await kv.get(ORDER_IDS_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
+}
+
+export async function addOrderId(kv: KVNamespace, id: string): Promise<void> {
+  const ids = await getOrderIds(kv);
+  ids.push(id);
+  await kv.put(ORDER_IDS_KEY, JSON.stringify(ids));
+}
+
+export async function clearOrderIds(kv: KVNamespace): Promise<void> {
+  await kv.delete(ORDER_IDS_KEY);
+}
+
 export async function listOrders(kv: KVNamespace): Promise<Order[]> {
-  const list = await kv.list({ prefix: "order:" });
+  const ids = await getOrderIds(kv);
   const entries = await Promise.all(
-    list.keys.map(async (k): Promise<Order | null> => {
-      const raw = await kv.get(k.name);
+    ids.map(async (id): Promise<Order | null> => {
+      const raw = await kv.get(`order:${id}`);
       if (!raw) return null;
       try {
         return JSON.parse(raw) as Order;

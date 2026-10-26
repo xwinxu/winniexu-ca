@@ -1,4 +1,4 @@
-import { Env, getAllMenu, getInventory, Order } from "../_shared";
+import { addOrderId, Env, getAllMenu, getInventory, Order } from "../_shared";
 
 interface CartItem {
   drink: string;
@@ -57,6 +57,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     createdAt: Date.now(),
   };
   await ctx.env.ORDERS_KV.put(`order:${id}`, JSON.stringify(order));
+  await addOrderId(ctx.env.ORDERS_KV, id);
 
   return Response.json(order);
 };
