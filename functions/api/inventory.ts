@@ -1,8 +1,13 @@
 import { Env, getAllMenu, getInventory, isStaffAuthed } from "../_shared";
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
-  const inventory = await getInventory(ctx.env.ORDERS_KV);
-  return Response.json(inventory);
+  try {
+    const inventory = await getInventory(ctx.env.ORDERS_KV);
+    return Response.json(inventory);
+  } catch (err) {
+    // TEMPORARY: surface the real error while debugging a production 500.
+    return new Response(`inventory error: ${err instanceof Error ? err.stack : String(err)}`, { status: 500 });
+  }
 };
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
