@@ -1,14 +1,6 @@
-// Edit these before the event.
+// Edit before the event. The menu itself (drinks, slices, prices, images,
+// inventory limits) now lives server-side — built-ins in functions/_shared.ts,
+// anything added on the day in the "Add menu item" form on the staff page.
 window.CAFE_CONFIG = {
   venmoUsername: "xwinxu",
-  drinks: [
-    { key: "teaone", name: "Tea & 1", price: 12 },
-    { key: "osmanthus", name: "Osmanthus Coconut", price: 7 },
-    { key: "banana", name: "Bananocano", price: 6 },
-    { key: "grapefruit", name: "Clarified Citrus", price: 8 },
-  ],
-  cakes: [
-    { key: "jasmine_sobacha", name: "Jasmine Sobacha", price: 6 },
-    { key: "sesame_miso", name: "Sesame Miso", price: 6 },
-  ],
 };

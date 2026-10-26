@@ -7,11 +7,13 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="brand">
-    <img src="assets/logo-mark.png" alt="" />
-    <span>Confucius Says</span>
+  <div class="page-narrow">
+    <div class="brand">
+      <img src="assets/logo-mark.png" alt="" />
+      <span>Confucius Says</span>
+    </div>
+    <div id="app"></div>
   </div>
-  <div id="app"></div>
 
   <script src="config.js"></script>
   <script>
@@ -32,21 +34,22 @@
     }
 
     // What's actually left once this cart's own (not-yet-submitted) picks are accounted for.
+    // No limit set yet -> treated as not-yet-available, not "unlimited" (returns null).
     function effectiveRemaining(stock, cartQty) {
-      if (!stock || stock.remaining === null) return null;
+      if (!stock || stock.total === null || stock.remaining === null) return null;
       return stock.remaining - cartQty;
     }
 
     // Both badges anticipate what adding to cart will do to stock, not just what's left on the server:
     // drinks flag "Running low" once your cart would push remaining at/under the ratio threshold;
-    // slices show the exact number once your cart would push remaining at/under the count threshold.
+    // pairings show the exact number once your cart would push remaining at/under the count threshold.
     // Either becomes "Sold out" once your cart would use up what's left.
-    function stockBadgeHtml(stock, hasImage, cartQty) {
+    function stockBadgeHtml(stock, cartQty) {
+      if (!stock || stock.total === null) return `<span class="sold-out-badge">Not available yet</span>`;
       const remaining = effectiveRemaining(stock, cartQty);
-      if (remaining === null) return "";
       if (remaining <= 0) return `<span class="sold-out-badge">Sold out (check with staff)</span>`;
-      if (hasImage) {
-        const ratioLow = stock.total !== null && stock.total > 0 && remaining / stock.total <= LOW_STOCK_RATIO;
+      if (stock.section === "drinks") {
+        const ratioLow = stock.total > 0 && remaining / stock.total <= LOW_STOCK_RATIO;
         const countLow = remaining <= DRINK_LOW_STOCK_MIN;
         if (ratioLow || countLow) {
           return `<span class="low-badge">Running low</span>`;
@@ -59,41 +62,41 @@
       return "";
     }
 
-    function cardHtml(item, inventory, hasImage) {
-      const stock = inventory[item.key];
+    function cardHtml(key, stock) {
+      const hasImage = Boolean(stock.imageUrl);
       const remaining0 = effectiveRemaining(stock, 0);
-      const soldOut = remaining0 !== null && remaining0 <= 0;
+      const unavailable = remaining0 === null || remaining0 <= 0;
       const media = hasImage
-        ? `<img src="assets/drinks/${item.key}.png" alt="${item.name}" />`
-        : `<div class="cake-placeholder"><span>&#127856;</span><span class="cake-name">${item.name}</span></div>`;
+        ? `<img src="${stock.imageUrl}" alt="${stock.name}" />`
+        : `<div class="cake-placeholder"><span>&#127856;</span><span class="cake-name">${stock.name}</span></div>`;
       return `
-      <div class="drink-card${soldOut ? " sold-out" : ""}" data-key="${item.key}" data-has-image="${hasImage}">
-        <button type="button" class="drink-tap" data-key="${item.key}" ${soldOut ? "disabled" : ""}>
+      <div class="drink-card${unavailable ? " sold-out" : ""}" data-key="${key}">
+        <button type="button" class="drink-tap" data-key="${key}" ${unavailable ? "disabled" : ""}>
           ${media}
         </button>
-        <span class="price-pill">$${item.price.toFixed(2)}</span>
-        <span class="stock-badge">${stockBadgeHtml(stock, hasImage, 0)}</span>
+        <span class="price-pill">$${stock.price.toFixed(2)}</span>
+        <span class="stock-badge">${stockBadgeHtml(stock, 0)}</span>
       </div>`;
     }
 
     async function renderForm() {
-      const { drinks, cakes = [] } = window.CAFE_CONFIG;
       const inventory = await fetchInventory();
-      const allItems = drinks.concat(cakes);
+      const drinkKeys = Object.keys(inventory).filter((k) => inventory[k].section === "drinks");
+      const pairingKeys = Object.keys(inventory).filter((k) => inventory[k].section !== "drinks");
       const cart = {}; // itemKey -> qty
 
       app.innerHTML = `
         <h1>What wisdom shall we brew?</h1>
         <p class="sub">Tap a drink or slice to add it to your order.</p>
         <div class="drink-grid" id="drink-grid">
-          ${drinks.map((d) => cardHtml(d, inventory, true)).join("")}
+          ${drinkKeys.map((k) => cardHtml(k, inventory[k])).join("")}
         </div>
         ${
-          cakes.length
+          pairingKeys.length
             ? `
         <p class="sub" style="margin:4px 0 8px">Seasonal Pairings</p>
         <div class="drink-grid" id="cake-grid">
-          ${cakes.map((c) => cardHtml(c, inventory, false)).join("")}
+          ${pairingKeys.map((k) => cardHtml(k, inventory[k])).join("")}
         </div>`
             : ""
         }
@@ -119,7 +122,7 @@
 
       function stockCap(key) {
         const stock = inventory[key];
-        return stock && stock.remaining !== null ? stock.remaining : Infinity;
+        return stock && stock.total !== null && stock.remaining !== null ? stock.remaining : 0;
       }
 
       function setQty(key, qty) {
@@ -139,7 +142,7 @@
         cartSummary.hidden = entries.length === 0;
         cartLines.innerHTML = entries
           .map(([key, qty]) => {
-            const d = allItems.find((d) => d.key === key);
+            const d = inventory[key];
             return `
           <li>
             <div class="meta">
@@ -156,7 +159,7 @@
           })
           .join("");
         const total = entries.reduce((sum, [key, qty]) => {
-          const d = allItems.find((d) => d.key === key);
+          const d = inventory[key];
           return sum + d.price * qty;
         }, 0);
         cartTotal.textContent = `Total: $${total.toFixed(2)}`;
@@ -164,15 +167,14 @@
         catalog.querySelectorAll(".drink-card").forEach((card) => {
           const key = card.dataset.key;
           const qty = cart[key] || 0;
-          const hasImage = card.dataset.hasImage === "true";
           const stock = inventory[key];
           const remaining = effectiveRemaining(stock, qty);
-          const atCap = remaining !== null && remaining <= 0;
+          const atCap = remaining === null || remaining <= 0;
 
           card.classList.toggle("selected", qty > 0);
           card.classList.toggle("sold-out", atCap);
           card.querySelector(".drink-tap").disabled = atCap;
-          card.querySelector(".stock-badge").innerHTML = stockBadgeHtml(stock, hasImage, qty);
+          card.querySelector(".stock-badge").innerHTML = stockBadgeHtml(stock, qty);
         });
       }
 
@@ -218,7 +220,7 @@
             body: JSON.stringify({ items, name: nameInput.value.trim() }),
           });
           if (res.status === 409) {
-            alert("Sorry, one of your drinks just sold out. Please adjust your order.");
+            alert("Sorry, one of your items just sold out or isn't available yet. Please adjust your order.");
             renderForm();
             return;
           }

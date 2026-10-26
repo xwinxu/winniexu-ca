@@ -1,4 +1,4 @@
-import { DRINKS, Env, getInventory, Order } from "../_shared";
+import { Env, getAllMenu, getInventory, Order } from "../_shared";
 
 interface CartItem {
   drink: string;
@@ -13,17 +13,21 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (!customerName || cart.length === 0) {
     return new Response("Invalid order", { status: 400 });
   }
+
+  const menu = await getAllMenu(ctx.env.ORDERS_KV);
   for (const item of cart) {
-    if (!DRINKS[item.drink] || !Number.isInteger(item.qty) || item.qty <= 0) {
+    if (!menu[item.drink] || !Number.isInteger(item.qty) || item.qty <= 0) {
       return new Response("Invalid order", { status: 400 });
     }
   }
 
+  // An item with no inventory limit set yet is treated as not-yet-available,
+  // not "unlimited" — staff must set a total before it can be ordered.
   const inventory = await getInventory(ctx.env.ORDERS_KV);
   for (const item of cart) {
     const stock = inventory[item.drink];
-    if (stock && stock.remaining !== null && stock.remaining < item.qty) {
-      return new Response("Sold out", { status: 409 });
+    if (!stock || stock.total === null || stock.remaining === null || stock.remaining < item.qty) {
+      return new Response("Not available", { status: 409 });
     }
   }
 
@@ -32,7 +36,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   await ctx.env.ORDERS_KV.put("counter", String(number));
 
   const items = cart.map((item) => {
-    const drink = DRINKS[item.drink];
+    const drink = menu[item.drink];
     return {
       drinkKey: item.drink,
       drinkName: drink.name,

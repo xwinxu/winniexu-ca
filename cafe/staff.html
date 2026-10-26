@@ -24,9 +24,32 @@
     <p class="sub">Confirm payments as they come in on Venmo, then run the drink queue.</p>
 
     <div class="card">
-      <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
-      <p class="sub" style="margin:0 0 8px">Set total cups available per drink. Guests see a "running low" flag once less than 10% of the total remains.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
+        <button type="button" id="reset-all" style="color:#e4a0a0;font-size:0.8rem">Reset all orders</button>
+      </div>
+      <p class="sub" style="margin:0 0 8px">
+        Set total units available per item. "Reset" clears just that item's limit; "Reset all orders" wipes all
+        order history (use before the event / to clear test data).
+      </p>
       <div class="inventory-grid" id="inventory-grid"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Add menu item</h2>
+      <p class="sub" style="margin:0 0 8px">
+        Appears immediately on the order page under Seasonal Pairings (or as a drink card if you give it an image).
+      </p>
+      <input type="text" id="new-item-name" placeholder="Name (e.g. Mango Pudding)" />
+      <select id="new-item-section">
+        <option value="pairings">Seasonal Pairings</option>
+        <option value="drinks">Drinks</option>
+      </select>
+      <input type="text" id="new-item-image" placeholder="Image path/URL (optional)" />
+      <input type="number" id="new-item-price" min="0" step="0.5" placeholder="Price ($)" />
+      <input type="number" id="new-item-limit" min="0" placeholder="Initial limit (leave blank: not orderable yet)" />
+      <button class="primary" id="new-item-submit">Add item</button>
+      <p class="sub" id="new-item-error" style="color:#e4a0a0;margin:8px 0 0" hidden></p>
     </div>
 
     <div class="card">
@@ -44,12 +67,19 @@
       <h2 style="margin:0 0 8px;font-size:1.05rem">Ready for pickup</h2>
       <ul class="queue-list" id="ready-list"></ul>
     </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Stats</h2>
+      <div id="stats-summary" class="stats-summary"></div>
+      <canvas id="stats-chart" width="640" height="220"></canvas>
+      <div id="stats-legend" class="stats-legend"></div>
+    </div>
   </div>
 
-  <script src="config.js"></script>
   <script>
     const STAFF_PASSWORD = "slaytea";
     const STAFF_TOKEN_KEY = "cafe_staff_token";
+    const CHART_COLORS = ["#a9cfe4", "#e4b8a0", "#b8e4a0", "#e4a0d8", "#e4d8a0", "#a0c4e4", "#d8a0e4"];
 
     function authHeaders() {
       return { "x-staff-password": sessionStorage.getItem(STAFF_TOKEN_KEY) || "" };
@@ -78,16 +108,14 @@
 
     function renderInventory(inventory) {
       const grid = document.getElementById("inventory-grid");
-      const { drinks, cakes = [] } = window.CAFE_CONFIG;
-      grid.innerHTML = drinks
-        .concat(cakes)
-        .map((d) => {
-          const stock = inventory[d.key] || { total: null, remaining: null };
+      grid.innerHTML = Object.entries(inventory)
+        .map(([key, stock]) => {
           return `
         <div class="inventory-row">
-          <span class="name">${d.name}</span>
+          <span class="name">${stock.name}</span>
           <span class="remaining">${stock.remaining === null ? "no limit set" : `${stock.remaining} left`}</span>
-          <input type="number" min="0" data-key="${d.key}" placeholder="total" value="${stock.total ?? ""}" />
+          <input type="number" min="0" data-key="${key}" placeholder="total" value="${stock.total ?? ""}" />
+          <button type="button" class="inventory-reset" data-key="${key}">Reset</button>
         </div>`;
         })
         .join("");
@@ -113,27 +141,85 @@
       true,
     );
 
-    // "1.0.2.0" = quantities of each menu item (drinks, then cakes) in config order
-    function drinkCode(order) {
-      const { drinks, cakes = [] } = window.CAFE_CONFIG;
-      return drinks
-        .concat(cakes)
-        .map((d) => {
-          const item = order.items.find((i) => i.drinkKey === d.key);
+    document.getElementById("inventory-grid").addEventListener("click", async (e) => {
+      const btn = e.target.closest(".inventory-reset");
+      if (!btn) return;
+      btn.disabled = true;
+      await fetch("/api/inventory/reset", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ drink: btn.dataset.key }),
+      });
+      refresh();
+    });
+
+    document.getElementById("reset-all").addEventListener("click", async () => {
+      const ok = confirm(
+        "This permanently deletes ALL orders and resets the order counter. Only use this before the event starts or to clear test data. Continue?",
+      );
+      if (!ok) return;
+      await fetch("/api/reset-all", { method: "POST", headers: authHeaders() });
+      refresh();
+    });
+
+    document.getElementById("new-item-submit").addEventListener("click", async () => {
+      const name = document.getElementById("new-item-name").value.trim();
+      const section = document.getElementById("new-item-section").value;
+      const imageUrl = document.getElementById("new-item-image").value.trim();
+      const price = parseFloat(document.getElementById("new-item-price").value);
+      const limit = document.getElementById("new-item-limit").value;
+      const errorEl = document.getElementById("new-item-error");
+      errorEl.hidden = true;
+
+      if (!name || Number.isNaN(price) || price <= 0) {
+        errorEl.textContent = "Name and a price greater than $0 are required.";
+        errorEl.hidden = false;
+        return;
+      }
+
+      const res = await fetch("/api/menu", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ name, price, section, imageUrl: imageUrl || undefined }),
+      });
+      if (!res.ok) {
+        errorEl.textContent = "Couldn't add that item. Try again.";
+        errorEl.hidden = false;
+        return;
+      }
+      const item = await res.json();
+      if (limit !== "" && !Number.isNaN(parseInt(limit, 10))) {
+        await saveInventory(item.key, parseInt(limit, 10));
+      }
+
+      document.getElementById("new-item-name").value = "";
+      document.getElementById("new-item-section").value = "pairings";
+      document.getElementById("new-item-image").value = "";
+      document.getElementById("new-item-price").value = "";
+      document.getElementById("new-item-limit").value = "";
+      refresh();
+    });
+
+    // "1.0.2.0" = quantities of each menu item, in the same order as the inventory list
+    function drinkCode(order, inventory) {
+      return Object.keys(inventory)
+        .map((key) => {
+          const item = order.items.find((i) => i.drinkKey === key);
           return item ? item.qty : 0;
         })
         .join(".");
     }
 
-    function renderList(el, orders, actionLabel, action, useDrinkCode) {
+    function renderList(el, orders, actionLabel, action, inventory) {
       if (orders.length === 0) {
         el.innerHTML = `<li class="empty">Nothing here</li>`;
         return;
       }
+      const useDrinkCode = Boolean(inventory);
       el.innerHTML = orders
         .map((o) => {
           const label = useDrinkCode
-            ? `${drinkCode(o)} ${o.customerName}`
+            ? `${drinkCode(o, inventory)} ${o.customerName}`
             : `#${o.number} &mdash; ${o.items.map((i) => `${i.qty}x ${i.drinkName}`).join(", ")}`;
           const sub = useDrinkCode
             ? `#${o.number} &middot; $${o.amount.toFixed(2)}`
@@ -150,19 +236,102 @@
         .join("");
     }
 
+    function formatDuration(ms) {
+      if (ms === null || ms === undefined) return "—";
+      const mins = ms / 60000;
+      return mins < 1 ? "<1 min" : `${mins.toFixed(1)} min`;
+    }
+
+    function renderStats(stats) {
+      const summary = document.getElementById("stats-summary");
+      summary.innerHTML = `
+        <div class="stat-tile"><span class="stat-value">${stats.orderCount}</span><span class="stat-label">Orders placed</span></div>
+        <div class="stat-tile"><span class="stat-value">${stats.confirmedCount}</span><span class="stat-label">Paid</span></div>
+        <div class="stat-tile"><span class="stat-value">${formatDuration(stats.avgWaitMs)}</span><span class="stat-label">Avg wait (order→ready)</span></div>
+        <div class="stat-tile"><span class="stat-value">${formatDuration(stats.avgPrepMs)}</span><span class="stat-label">Avg prep (paid→ready)</span></div>
+      `;
+
+      const items = Object.entries(stats.items).filter(([, s]) => s.series.length > 0);
+      const canvas = document.getElementById("stats-chart");
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const legend = document.getElementById("stats-legend");
+      if (items.length === 0) {
+        legend.innerHTML = `<p class="empty">No confirmed orders yet</p>`;
+        return;
+      }
+
+      const allPoints = items.flatMap(([, s]) => s.series);
+      const minT = Math.min(...allPoints.map((p) => p.t));
+      const maxT = Math.max(...allPoints.map((p) => p.t));
+      const maxCumulative = Math.max(...allPoints.map((p) => p.cumulative));
+      const padding = 24;
+      const x = (t) => padding + ((t - minT) / Math.max(1, maxT - minT)) * (w - padding * 2);
+      const y = (c) => h - padding - (c / Math.max(1, maxCumulative)) * (h - padding * 2);
+
+      // axes
+      ctx.strokeStyle = "#5c3a27";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, padding);
+      ctx.lineTo(padding, h - padding);
+      ctx.lineTo(w - padding, h - padding);
+      ctx.stroke();
+
+      items.forEach(([key, s], i) => {
+        const color = CHART_COLORS[i % CHART_COLORS.length];
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x(minT), y(0));
+        s.series.forEach((p) => ctx.lineTo(x(p.t), y(p.cumulative)));
+        ctx.stroke();
+      });
+
+      legend.innerHTML = items
+        .map(([key, s], i) => {
+          const color = CHART_COLORS[i % CHART_COLORS.length];
+          const soldOutText = s.soldOutAt
+            ? `sold out at ${new Date(s.soldOutAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+            : "";
+          return `
+        <div class="legend-row">
+          <span class="legend-swatch" style="background:${color}"></span>
+          <span class="legend-name">${s.name}</span>
+          <span class="legend-detail">${s.totalSold} sold &middot; avg prep ${formatDuration(s.avgPrepMs)}${soldOutText ? " &middot; " + soldOutText : ""}</span>
+        </div>`;
+        })
+        .join("");
+    }
+
     async function refresh() {
       try {
-        const [queueRes, inventoryRes] = await Promise.all([fetch("/api/queue"), fetch("/api/inventory")]);
-        if (queueRes.ok) {
-          const { awaitingPayment, preparing, ready } = await queueRes.json();
-          renderList(document.getElementById("awaiting-list"), awaitingPayment, "Confirm paid", "confirm-payment");
-          renderList(document.getElementById("preparing-list"), preparing, "Mark ready", "advance", true);
-          renderList(document.getElementById("ready-list"), ready, "Picked up", "advance");
-        }
+        const [queueRes, inventoryRes, statsRes] = await Promise.all([
+          fetch("/api/queue"),
+          fetch("/api/inventory"),
+          fetch("/api/stats", { headers: authHeaders() }),
+        ]);
+
+        let inventory = null;
         const inventoryGrid = document.getElementById("inventory-grid");
         const editingInput = inventoryGrid.contains(document.activeElement) ? document.activeElement : null;
-        if (inventoryRes.ok && !editingInput) {
-          renderInventory(await inventoryRes.json());
+        if (inventoryRes.ok) {
+          inventory = await inventoryRes.json();
+          if (!editingInput) renderInventory(inventory);
+        }
+
+        if (queueRes.ok && inventory) {
+          const { awaitingPayment, preparing, ready } = await queueRes.json();
+          renderList(document.getElementById("awaiting-list"), awaitingPayment, "Confirm paid", "confirm-payment");
+          renderList(document.getElementById("preparing-list"), preparing, "Mark ready", "advance", inventory);
+          renderList(document.getElementById("ready-list"), ready, "Picked up", "advance");
+        }
+
+        if (statsRes.ok) {
+          renderStats(await statsRes.json());
         }
       } catch (_) {
         // ignore transient network errors

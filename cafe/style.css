@@ -20,6 +20,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.page-narrow {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -221,7 +226,8 @@ button:active {
 }
 
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+select {
   width: 100%;
   font-size: 1rem;
   padding: 12px;
@@ -298,7 +304,7 @@ input[type="number"] {
 
 .inventory-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: 10px;
 }
@@ -316,4 +322,76 @@ input[type="number"] {
 .inventory-row input[type="number"] {
   margin: 0;
   width: 80px;
+}
+
+.inventory-row .inventory-reset {
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  color: var(--muted);
+}
+
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.stat-tile {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+#stats-chart {
+  width: 100%;
+  height: auto;
+  max-width: 640px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.stats-legend {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.legend-name {
+  font-weight: 600;
+  min-width: 110px;
+}
+
+.legend-detail {
+  color: var(--muted);
 }
