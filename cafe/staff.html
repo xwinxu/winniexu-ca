@@ -25,7 +25,7 @@
 
     <div class="card">
       <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
-      <p class="sub" style="margin:0 0 8px">Set total cups available per drink. Guests see a "running low" flag once under 10% of the total remains.</p>
+      <p class="sub" style="margin:0 0 8px">Set total cups available per drink. Guests see a "running low" flag once less than 10% of the total remains.</p>
       <div class="inventory-grid" id="inventory-grid"></div>
     </div>
 
@@ -78,7 +78,9 @@
 
     function renderInventory(inventory) {
       const grid = document.getElementById("inventory-grid");
-      grid.innerHTML = window.CAFE_CONFIG.drinks
+      const { drinks, cakes = [] } = window.CAFE_CONFIG;
+      grid.innerHTML = drinks
+        .concat(cakes)
         .map((d) => {
           const stock = inventory[d.key] || { total: null, remaining: null };
           return `
@@ -111,9 +113,11 @@
       true,
     );
 
-    // "1.0.2.0" = quantities of each menu drink in config order (0 if none ordered)
+    // "1.0.2.0" = quantities of each menu item (drinks, then cakes) in config order
     function drinkCode(order) {
-      return window.CAFE_CONFIG.drinks
+      const { drinks, cakes = [] } = window.CAFE_CONFIG;
+      return drinks
+        .concat(cakes)
         .map((d) => {
           const item = order.items.find((i) => i.drinkKey === d.key);
           return item ? item.qty : 0;

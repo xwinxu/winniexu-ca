@@ -7,6 +7,8 @@ export const DRINKS: Record<string, { name: string; price: number }> = {
   osmanthus: { name: "Osmanthus Coconut", price: 7 },
   banana: { name: "Bananocano", price: 6 },
   grapefruit: { name: "Clarified Citrus", price: 8 },
+  jasmine_sobacha: { name: "Jasmine Sobacha", price: 6 },
+  sesame_miso: { name: "Sesame Miso", price: 6 },
 };
 
 export interface OrderItem {

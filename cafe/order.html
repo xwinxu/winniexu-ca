@@ -17,7 +17,9 @@
   <script>
     const STORAGE_KEY = "cafe_order_id";
     const app = document.getElementById("app");
-    const LOW_STOCK_RATIO = 0.1; // flag "running low" once remaining stock is at or under 10% of total
+    const LOW_STOCK_RATIO = 0.1; // drinks: flag "running low" once remaining stock is at or under 10% of total
+    const DRINK_LOW_STOCK_MIN = 2; // drinks: also flag once remaining is this low in absolute terms (small totals round the ratio away)
+    const SLICE_LOW_STOCK_COUNT = 5; // slices: show the exact remaining count once at or under this
 
     async function fetchInventory() {
       try {
@@ -29,37 +31,72 @@
       }
     }
 
+    // What's actually left once this cart's own (not-yet-submitted) picks are accounted for.
+    function effectiveRemaining(stock, cartQty) {
+      if (!stock || stock.remaining === null) return null;
+      return stock.remaining - cartQty;
+    }
+
+    // Both badges anticipate what adding to cart will do to stock, not just what's left on the server:
+    // drinks flag "Running low" once your cart would push remaining at/under the ratio threshold;
+    // slices show the exact number once your cart would push remaining at/under the count threshold.
+    // Either becomes "Sold out" once your cart would use up what's left.
+    function stockBadgeHtml(stock, hasImage, cartQty) {
+      const remaining = effectiveRemaining(stock, cartQty);
+      if (remaining === null) return "";
+      if (remaining <= 0) return `<span class="sold-out-badge">Sold out (check with staff)</span>`;
+      if (hasImage) {
+        const ratioLow = stock.total !== null && stock.total > 0 && remaining / stock.total <= LOW_STOCK_RATIO;
+        const countLow = remaining <= DRINK_LOW_STOCK_MIN;
+        if (ratioLow || countLow) {
+          return `<span class="low-badge">Running low</span>`;
+        }
+        return "";
+      }
+      if (remaining <= SLICE_LOW_STOCK_COUNT) {
+        return `<span class="low-badge">${remaining} left</span>`;
+      }
+      return "";
+    }
+
+    function cardHtml(item, inventory, hasImage) {
+      const stock = inventory[item.key];
+      const remaining0 = effectiveRemaining(stock, 0);
+      const soldOut = remaining0 !== null && remaining0 <= 0;
+      const media = hasImage
+        ? `<img src="assets/drinks/${item.key}.png" alt="${item.name}" />`
+        : `<div class="cake-placeholder"><span>&#127856;</span><span class="cake-name">${item.name}</span></div>`;
+      return `
+      <div class="drink-card${soldOut ? " sold-out" : ""}" data-key="${item.key}" data-has-image="${hasImage}">
+        <button type="button" class="drink-tap" data-key="${item.key}" ${soldOut ? "disabled" : ""}>
+          ${media}
+        </button>
+        <span class="price-pill">$${item.price.toFixed(2)}</span>
+        <span class="stock-badge">${stockBadgeHtml(stock, hasImage, 0)}</span>
+      </div>`;
+    }
+
     async function renderForm() {
-      const { drinks } = window.CAFE_CONFIG;
+      const { drinks, cakes = [] } = window.CAFE_CONFIG;
       const inventory = await fetchInventory();
-      const cart = {}; // drinkKey -> qty
+      const allItems = drinks.concat(cakes);
+      const cart = {}; // itemKey -> qty
 
       app.innerHTML = `
         <h1>What wisdom shall we brew?</h1>
-        <p class="sub">Tap a drink to add it &mdash; tap again to add more.</p>
+        <p class="sub">Tap a drink or slice to add it to your order.</p>
         <div class="drink-grid" id="drink-grid">
-          ${drinks
-            .map((d) => {
-              const stock = inventory[d.key];
-              const soldOut = stock && stock.remaining !== null && stock.remaining <= 0;
-              const low =
-                !soldOut &&
-                stock &&
-                stock.remaining !== null &&
-                stock.total !== null &&
-                stock.total > 0 &&
-                stock.remaining / stock.total <= LOW_STOCK_RATIO;
-              return `
-            <button type="button" class="drink-card" data-key="${d.key}" ${soldOut ? "disabled" : ""}>
-              <img src="assets/drinks/${d.key}.png" alt="${d.name}" />
-              <span class="price-pill">$${d.price.toFixed(2)}</span>
-              ${soldOut ? `<span class="sold-out-badge">Sold out</span>` : ""}
-              ${low ? `<span class="low-badge">Running low</span>` : ""}
-              <span class="qty-badge" hidden>0</span>
-            </button>`;
-            })
-            .join("")}
+          ${drinks.map((d) => cardHtml(d, inventory, true)).join("")}
         </div>
+        ${
+          cakes.length
+            ? `
+        <p class="sub" style="margin:4px 0 8px">Seasonal Pairings</p>
+        <div class="drink-grid" id="cake-grid">
+          ${cakes.map((c) => cardHtml(c, inventory, false)).join("")}
+        </div>`
+            : ""
+        }
         <div class="card" id="cart-summary" hidden>
           <p class="sub" style="margin:0 0 8px">Your order</p>
           <ul class="queue-list" id="cart-lines"></ul>
@@ -69,7 +106,7 @@
         <button class="primary" id="submit" disabled>Place order</button>
       `;
 
-      const grid = document.getElementById("drink-grid");
+      const catalog = document.getElementById("app");
       const submitBtn = document.getElementById("submit");
       const nameInput = document.getElementById("name");
       const cartSummary = document.getElementById("cart-summary");
@@ -102,32 +139,40 @@
         cartSummary.hidden = entries.length === 0;
         cartLines.innerHTML = entries
           .map(([key, qty]) => {
-            const d = drinks.find((d) => d.key === key);
+            const d = allItems.find((d) => d.key === key);
             return `
           <li>
             <div class="meta">
               <span class="n">${d.name}</span>
               <span class="d">$${(d.price * qty).toFixed(2)}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="number" min="0" inputmode="numeric" class="cart-qty" data-key="${key}" value="${qty}" style="width:60px;margin:0" />
+            <div class="cart-stepper">
+              <button type="button" class="cart-minus" data-key="${key}" aria-label="Remove one">&minus;</button>
+              <span class="cart-qty-value">${qty}</span>
+              <button type="button" class="cart-plus" data-key="${key}" aria-label="Add one">+</button>
               <button type="button" class="cart-remove" data-key="${key}" aria-label="Remove">&times;</button>
             </div>
           </li>`;
           })
           .join("");
         const total = entries.reduce((sum, [key, qty]) => {
-          const d = drinks.find((d) => d.key === key);
+          const d = allItems.find((d) => d.key === key);
           return sum + d.price * qty;
         }, 0);
         cartTotal.textContent = `Total: $${total.toFixed(2)}`;
 
-        grid.querySelectorAll(".drink-card").forEach((btn) => {
-          const qty = cart[btn.dataset.key] || 0;
-          const badge = btn.querySelector(".qty-badge");
-          badge.hidden = qty === 0;
-          badge.textContent = qty;
-          btn.classList.toggle("selected", qty > 0);
+        catalog.querySelectorAll(".drink-card").forEach((card) => {
+          const key = card.dataset.key;
+          const qty = cart[key] || 0;
+          const hasImage = card.dataset.hasImage === "true";
+          const stock = inventory[key];
+          const remaining = effectiveRemaining(stock, qty);
+          const atCap = remaining !== null && remaining <= 0;
+
+          card.classList.toggle("selected", qty > 0);
+          card.classList.toggle("sold-out", atCap);
+          card.querySelector(".drink-tap").disabled = atCap;
+          card.querySelector(".stock-badge").innerHTML = stockBadgeHtml(stock, hasImage, qty);
         });
       }
 
@@ -135,29 +180,27 @@
         submitBtn.disabled = totalQty() === 0 || !nameInput.value.trim();
       }
 
-      grid.querySelectorAll(".drink-card:not(:disabled)").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const key = btn.dataset.key;
-          setQty(key, (cart[key] || 0) + 1);
-        });
-      });
-
-      cartLines.addEventListener("change", (e) => {
-        const input = e.target.closest(".cart-qty");
-        if (!input) return;
-        const qty = parseInt(input.value, 10);
-        const clamped = setQty(input.dataset.key, Number.isNaN(qty) ? 0 : qty);
-        if (clamped !== qty) {
-          // reflect any clamping (e.g. typed more than remaining stock) back into the field
-          const refreshed = cartLines.querySelector(`.cart-qty[data-key="${input.dataset.key}"]`);
-          if (refreshed) refreshed.value = clamped;
+      catalog.addEventListener("click", (e) => {
+        const tap = e.target.closest(".drink-tap");
+        if (tap && !tap.disabled) {
+          setQty(tap.dataset.key, (cart[tap.dataset.key] || 0) + 1);
         }
       });
 
       cartLines.addEventListener("click", (e) => {
-        const btn = e.target.closest(".cart-remove");
-        if (!btn) return;
-        setQty(btn.dataset.key, 0);
+        const plus = e.target.closest(".cart-plus");
+        const minus = e.target.closest(".cart-minus");
+        const remove = e.target.closest(".cart-remove");
+        if (plus) {
+          setQty(plus.dataset.key, (cart[plus.dataset.key] || 0) + 1);
+          return;
+        }
+        if (minus) {
+          setQty(minus.dataset.key, (cart[minus.dataset.key] || 0) - 1);
+          return;
+        }
+        if (!remove) return;
+        setQty(remove.dataset.key, 0);
       });
 
       nameInput.addEventListener("input", updateSubmit);

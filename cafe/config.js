@@ -7,4 +7,8 @@ window.CAFE_CONFIG = {
     { key: "banana", name: "Bananocano", price: 6 },
     { key: "grapefruit", name: "Clarified Citrus", price: 8 },
   ],
+  cakes: [
+    { key: "jasmine_sobacha", name: "Jasmine Sobacha", price: 6 },
+    { key: "sesame_miso", name: "Sesame Miso", price: 6 },
+  ],
 };

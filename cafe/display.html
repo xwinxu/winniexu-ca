@@ -101,7 +101,9 @@
   <script src="config.js"></script>
   <script>
     function drinkCode(order) {
-      return window.CAFE_CONFIG.drinks
+      const { drinks, cakes = [] } = window.CAFE_CONFIG;
+      return drinks
+        .concat(cakes)
         .map((d) => {
           const item = order.items.find((i) => i.drinkKey === d.key);
           return item ? item.qty : 0;
