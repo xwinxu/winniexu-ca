@@ -58,7 +58,19 @@ export function isStaffAuthed(request: Request): boolean {
 
 export async function listOrders(kv: KVNamespace): Promise<Order[]> {
   const list = await kv.list({ prefix: "order:" });
-  return Promise.all(list.keys.map(async (k) => JSON.parse((await kv.get(k.name)) as string)));
+  const entries = await Promise.all(
+    list.keys.map(async (k): Promise<Order | null> => {
+      const raw = await kv.get(k.name);
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw) as Order;
+      } catch {
+        // A single malformed/partially-written entry shouldn't take down the whole queue.
+        return null;
+      }
+    }),
+  );
+  return entries.filter((o): o is Order => o !== null);
 }
 
 // Staff-added items, layered on top of the built-in DRINKS so the menu can grow

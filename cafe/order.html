@@ -22,13 +22,9 @@
     const SLICE_LOW_STOCK_COUNT = 5; // pairings: show the exact remaining count once at or under this
 
     async function fetchInventory() {
-      try {
-        const res = await fetch("/api/inventory");
-        if (!res.ok) return {};
-        return await res.json();
-      } catch (_) {
-        return {};
-      }
+      const res = await fetch("/api/inventory");
+      if (!res.ok) throw new Error(`inventory fetch failed: ${res.status}`);
+      return res.json();
     }
 
     // What's actually left once this cart's own (not-yet-submitted) picks are accounted for.
@@ -72,7 +68,18 @@
     }
 
     async function renderForm() {
-      const inventory = await fetchInventory();
+      let inventory;
+      try {
+        inventory = await fetchInventory();
+      } catch (_) {
+        app.innerHTML = `
+          <h1>Couldn't load the menu</h1>
+          <p class="sub">Something went wrong on our end. Please check with staff, or try again.</p>
+          <button id="retry-load" style="width:100%">Try again</button>
+        `;
+        document.getElementById("retry-load").addEventListener("click", renderForm);
+        return;
+      }
       const drinkKeys = Object.keys(inventory).filter((k) => inventory[k].section === "drinks");
       const pairingKeys = Object.keys(inventory).filter((k) => inventory[k].section !== "drinks");
       const cart = {}; // itemKey -> qty
