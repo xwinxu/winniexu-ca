@@ -51,19 +51,46 @@
     }
 
     function cardHtml(key, stock) {
-      const hasImage = Boolean(stock.imageUrl);
       const remaining0 = effectiveRemaining(stock, 0);
       const unavailable = remaining0 === null || remaining0 <= 0;
-      const media = hasImage
+      const disabledAttr = unavailable ? "disabled" : "";
+
+      if (stock.backImageUrl) {
+        // Flip card: tap the front to flip and see details; "Add to cart" lives on the back.
+        return `
+      <div class="drink-card-wrap">
+        <div class="drink-card flip-card" data-key="${key}" data-flippable="true">
+          <div class="flip-inner">
+            <div class="flip-front">
+              <button type="button" class="drink-tap" data-key="${key}" ${disabledAttr}>
+                <img src="${stock.imageUrl}" alt="${stock.name}" />
+              </button>
+              <span class="stock-badge">${stockBadgeHtml(stock, 0)}</span>
+              <span class="price-badge">$${stock.price.toFixed(2)}</span>
+            </div>
+            <div class="flip-back" data-key="${key}">
+              <img src="${stock.backImageUrl}" alt="" />
+              <button type="button" class="add-to-cart-btn" data-key="${key}" ${disabledAttr}>Add to cart</button>
+            </div>
+          </div>
+        </div>
+        <p class="card-name">${stock.name}</p>
+      </div>`;
+      }
+
+      const media = stock.imageUrl
         ? `<img src="${stock.imageUrl}" alt="${stock.name}" />`
         : `<div class="cake-placeholder"><span>&#127856;</span><span class="cake-name">${stock.name}</span></div>`;
       return `
-      <div class="drink-card${unavailable ? " sold-out" : ""}" data-key="${key}">
-        <button type="button" class="drink-tap" data-key="${key}" ${unavailable ? "disabled" : ""}>
-          ${media}
-        </button>
-        <span class="price-pill">$${stock.price.toFixed(2)}</span>
-        <span class="stock-badge">${stockBadgeHtml(stock, 0)}</span>
+      <div class="drink-card-wrap">
+        <div class="drink-card${unavailable ? " sold-out" : ""}" data-key="${key}">
+          <button type="button" class="drink-tap" data-key="${key}" ${disabledAttr}>
+            ${media}
+          </button>
+          <span class="stock-badge">${stockBadgeHtml(stock, 0)}</span>
+          <span class="price-badge">$${stock.price.toFixed(2)}</span>
+        </div>
+        <p class="card-name">${stock.name}</p>
       </div>`;
     }
 
@@ -86,7 +113,7 @@
 
       app.innerHTML = `
         <h1>What wisdom shall we brew?</h1>
-        <p class="sub">Tap a drink or slice to add it to your order.</p>
+        <p class="sub">Tap a drink or slice to flip it over and add it to your order.</p>
         <div class="drink-grid" id="drink-grid">
           ${drinkKeys.map((k) => cardHtml(k, inventory[k])).join("")}
         </div>
@@ -172,8 +199,11 @@
 
           card.classList.toggle("selected", qty > 0);
           card.classList.toggle("sold-out", atCap);
-          card.querySelector(".drink-tap").disabled = atCap;
-          card.querySelector(".stock-badge").innerHTML = stockBadgeHtml(stock, qty);
+          card.querySelectorAll(".drink-tap, .add-to-cart-btn").forEach((btn) => {
+            btn.disabled = atCap;
+          });
+          const badge = card.querySelector(".stock-badge");
+          if (badge) badge.innerHTML = stockBadgeHtml(stock, qty);
         });
       }
 
@@ -183,8 +213,25 @@
 
       catalog.addEventListener("click", (e) => {
         const tap = e.target.closest(".drink-tap");
+        const addBtn = e.target.closest(".add-to-cart-btn");
+        const back = e.target.closest(".flip-back");
+
         if (tap && !tap.disabled) {
-          setQty(tap.dataset.key, (cart[tap.dataset.key] || 0) + 1);
+          const card = tap.closest(".drink-card");
+          if (card.dataset.flippable === "true") {
+            card.classList.add("flipped");
+          } else {
+            setQty(tap.dataset.key, (cart[tap.dataset.key] || 0) + 1);
+          }
+          return;
+        }
+        if (addBtn && !addBtn.disabled) {
+          setQty(addBtn.dataset.key, (cart[addBtn.dataset.key] || 0) + 1);
+          return;
+        }
+        // Tapping anywhere else on the flipped back (not the Add to cart button) flips it back.
+        if (back) {
+          back.closest(".drink-card").classList.remove("flipped");
         }
       });
 

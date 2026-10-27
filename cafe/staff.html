@@ -11,7 +11,7 @@
     <img src="assets/logo-mark.png" alt="" />
     <span>Confucius Says</span>
   </div>
-  <h1>Staff view</h1>
+  <h1>Lock TF In Team</h1>
 
   <div class="card" id="gate">
     <p class="sub" style="margin:0 0 8px">Enter the staff password to continue.</p>
@@ -73,6 +73,13 @@
       <div id="stats-summary" class="stats-summary"></div>
       <canvas id="stats-chart" width="640" height="220"></canvas>
       <div id="stats-legend" class="stats-legend"></div>
+      <p class="sub" style="margin:16px 0 8px">Cloudflare plan reference (not live usage)</p>
+      <div class="plan-limits">
+        <div class="plan-limit"><span class="n">Unlimited</span><span class="l">requests (10M/mo included, then $0.30/M)</span></div>
+        <div class="plan-limit"><span class="n">10,000</span><span class="l">subrequests / request (configurable up to 10M)</span></div>
+        <div class="plan-limit"><span class="n">10 MB</span><span class="l">worker script size</span></div>
+        <div class="plan-limit"><span class="n">250</span><span class="l">cron triggers</span></div>
+      </div>
     </div>
   </div>
 
@@ -116,6 +123,11 @@
           <span class="remaining">${stock.remaining === null ? "no limit set" : `${stock.remaining} left`}</span>
           <input type="number" min="0" data-key="${key}" placeholder="total" value="${stock.total ?? ""}" />
           <button type="button" class="inventory-reset" data-key="${key}">Reset</button>
+          ${
+            stock.removable
+              ? `<button type="button" class="inventory-remove" data-key="${key}" aria-label="Remove item from menu">Remove</button>`
+              : `<span></span>`
+          }
         </div>`;
         })
         .join("");
@@ -142,15 +154,31 @@
     );
 
     document.getElementById("inventory-grid").addEventListener("click", async (e) => {
-      const btn = e.target.closest(".inventory-reset");
-      if (!btn) return;
-      btn.disabled = true;
-      await fetch("/api/inventory/reset", {
-        method: "POST",
-        headers: { "content-type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ drink: btn.dataset.key }),
-      });
-      refresh();
+      const resetBtn = e.target.closest(".inventory-reset");
+      const removeBtn = e.target.closest(".inventory-remove");
+
+      if (resetBtn) {
+        resetBtn.disabled = true;
+        await fetch("/api/inventory/reset", {
+          method: "POST",
+          headers: { "content-type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ drink: resetBtn.dataset.key }),
+        });
+        refresh();
+        return;
+      }
+
+      if (removeBtn) {
+        const ok = confirm("Remove this item from the menu entirely? This can't be undone.");
+        if (!ok) return;
+        removeBtn.disabled = true;
+        await fetch("/api/menu/remove", {
+          method: "POST",
+          headers: { "content-type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ key: removeBtn.dataset.key }),
+        });
+        refresh();
+      }
     });
 
     document.getElementById("reset-all").addEventListener("click", async () => {

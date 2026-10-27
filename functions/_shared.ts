@@ -8,16 +8,53 @@ export interface MenuItemDef {
   name: string;
   price: number;
   section: MenuSection; // drinks: ratio-based "running low". pairings: exact-count low-stock.
-  imageUrl?: string; // optional either way; absent -> placeholder card art
+  imageUrl?: string; // optional; absent -> placeholder card art
+  backImageUrl?: string; // optional; present -> card flips to show this + an Add to cart button
 }
 
 export const DRINKS: Record<string, MenuItemDef> = {
-  teaone: { name: "Tea & 1", price: 12, section: "drinks", imageUrl: "assets/drinks/teaone.png" },
-  osmanthus: { name: "Osmanthus Coconut", price: 7, section: "drinks", imageUrl: "assets/drinks/osmanthus.png" },
-  banana: { name: "Bananocano", price: 6, section: "drinks", imageUrl: "assets/drinks/banana.png" },
-  grapefruit: { name: "Clarified Citrus", price: 8, section: "drinks", imageUrl: "assets/drinks/grapefruit.png" },
-  jasmine_sobacha: { name: "Jasmine Sobacha", price: 6, section: "pairings" },
-  sesame_miso: { name: "Sesame Miso", price: 6, section: "pairings" },
+  teaone: {
+    name: "Tea & 1",
+    price: 12,
+    section: "drinks",
+    imageUrl: "assets/drinks/teaone.png",
+    backImageUrl: "assets/drinks/teaone-back.png",
+  },
+  osmanthus: {
+    name: "Osmanthus Coconut",
+    price: 7,
+    section: "drinks",
+    imageUrl: "assets/drinks/osmanthus.png",
+    backImageUrl: "assets/drinks/osmanthus-back.png",
+  },
+  banana: {
+    name: "Bananocano",
+    price: 6,
+    section: "drinks",
+    imageUrl: "assets/drinks/banana.png",
+    backImageUrl: "assets/drinks/banana-back.png",
+  },
+  grapefruit: {
+    name: "Clarified Citrus",
+    price: 8,
+    section: "drinks",
+    imageUrl: "assets/drinks/grapefruit.png",
+    backImageUrl: "assets/drinks/grapefruit-back.png",
+  },
+  jasmine_sobacha: {
+    name: "Jasmine Sobacha",
+    price: 6,
+    section: "pairings",
+    imageUrl: "assets/drinks/jasmine_sobacha.png",
+    backImageUrl: "assets/drinks/jasmine_sobacha-back.png",
+  },
+  sesame_miso: {
+    name: "Sesame Miso",
+    price: 6,
+    section: "pairings",
+    imageUrl: "assets/drinks/sesame_miso.png",
+    backImageUrl: "assets/drinks/sesame_miso-back.png",
+  },
 };
 
 export interface OrderItem {
@@ -46,8 +83,10 @@ export interface InventoryEntry {
   price: number;
   section: MenuSection;
   imageUrl?: string;
+  backImageUrl?: string;
   total: number | null;
   remaining: number | null;
+  removable: boolean; // staff-added items can be deleted entirely; built-ins can't
 }
 
 export const STAFF_PASSWORD = "slaytea";
@@ -111,6 +150,15 @@ export async function saveExtraMenu(kv: KVNamespace, extras: Record<string, Menu
   await kv.put("menu:extra", JSON.stringify(extras));
 }
 
+export async function removeExtraMenuItem(kv: KVNamespace, key: string): Promise<boolean> {
+  const extras = await getExtraMenu(kv);
+  if (!(key in extras)) return false;
+  delete extras[key];
+  await saveExtraMenu(kv, extras);
+  await kv.delete(`inventory:total:${key}`);
+  return true;
+}
+
 export async function getAllMenu(kv: KVNamespace): Promise<Record<string, MenuItemDef>> {
   const extras = await getExtraMenu(kv);
   return { ...DRINKS, ...extras };
@@ -152,8 +200,10 @@ export async function getInventory(kv: KVNamespace): Promise<Record<string, Inve
       price: def.price,
       section: def.section,
       imageUrl: def.imageUrl,
+      backImageUrl: def.backImageUrl,
       total,
       remaining: total !== null ? Math.max(0, total - (used[key] || 0)) : null,
+      removable: !(key in DRINKS),
     };
   }
   return result;
