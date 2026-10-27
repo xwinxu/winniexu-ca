@@ -125,7 +125,7 @@
           <button type="button" class="inventory-reset" data-key="${key}">Reset</button>
           ${
             stock.removable
-              ? `<button type="button" class="inventory-remove" data-key="${key}" aria-label="Remove item from menu">Remove</button>`
+              ? `<button type="button" class="inventory-remove" data-key="${key}" aria-label="Remove item from menu">&times;</button>`
               : `<span></span>`
           }
         </div>`;
@@ -186,8 +186,21 @@
         "This permanently deletes ALL orders and resets the order counter. Only use this before the event starts or to clear test data. Continue?",
       );
       if (!ok) return;
-      await fetch("/api/reset-all", { method: "POST", headers: authHeaders() });
-      refresh();
+      const btn = document.getElementById("reset-all");
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/reset-all", { method: "POST", headers: authHeaders() });
+        if (!res.ok) {
+          alert(`Reset failed (${res.status}). Try again or check the password.`);
+          return;
+        }
+        await refresh();
+        alert("All orders cleared.");
+      } catch (err) {
+        alert("Reset failed: network error. Try again.");
+      } finally {
+        btn.disabled = false;
+      }
     });
 
     document.getElementById("new-item-submit").addEventListener("click", async () => {

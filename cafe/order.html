@@ -70,7 +70,11 @@
             </div>
             <div class="flip-back" data-key="${key}">
               <img src="${stock.backImageUrl}" alt="" />
-              <button type="button" class="add-to-cart-btn" data-key="${key}" ${disabledAttr}>Add to cart</button>
+              <div class="back-stepper">
+                <button type="button" class="back-minus" data-key="${key}" aria-label="Remove one">&minus;</button>
+                <span class="back-qty-value" data-key="${key}">0</span>
+                <button type="button" class="back-plus" data-key="${key}" aria-label="Add one" ${disabledAttr}>+</button>
+              </div>
             </div>
           </div>
         </div>
@@ -199,9 +203,11 @@
 
           card.classList.toggle("selected", qty > 0);
           card.classList.toggle("sold-out", atCap);
-          card.querySelectorAll(".drink-tap, .add-to-cart-btn").forEach((btn) => {
+          card.querySelectorAll(".drink-tap, .back-plus").forEach((btn) => {
             btn.disabled = atCap;
           });
+          const backQty = card.querySelector(".back-qty-value");
+          if (backQty) backQty.textContent = qty;
           const badge = card.querySelector(".stock-badge");
           if (badge) badge.innerHTML = stockBadgeHtml(stock, qty);
         });
@@ -213,7 +219,8 @@
 
       catalog.addEventListener("click", (e) => {
         const tap = e.target.closest(".drink-tap");
-        const addBtn = e.target.closest(".add-to-cart-btn");
+        const backPlus = e.target.closest(".back-plus");
+        const backMinus = e.target.closest(".back-minus");
         const back = e.target.closest(".flip-back");
 
         if (tap && !tap.disabled) {
@@ -225,11 +232,15 @@
           }
           return;
         }
-        if (addBtn && !addBtn.disabled) {
-          setQty(addBtn.dataset.key, (cart[addBtn.dataset.key] || 0) + 1);
+        if (backPlus && !backPlus.disabled) {
+          setQty(backPlus.dataset.key, (cart[backPlus.dataset.key] || 0) + 1);
           return;
         }
-        // Tapping anywhere else on the flipped back (not the Add to cart button) flips it back.
+        if (backMinus) {
+          setQty(backMinus.dataset.key, (cart[backMinus.dataset.key] || 0) - 1);
+          return;
+        }
+        // Tapping anywhere else on the flipped back (not the +/- buttons) flips it back.
         if (back) {
           back.closest(".drink-card").classList.remove("flipped");
         }

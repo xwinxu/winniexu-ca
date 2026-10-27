@@ -81,8 +81,8 @@ button:active {
 
 .drink-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
   margin-bottom: 16px;
 }
 
@@ -173,22 +173,40 @@ button:active {
   display: block;
 }
 
-.add-to-cart-btn {
+.back-stepper {
   position: relative;
   z-index: 1;
-  background: var(--accent);
-  color: #2b1710;
-  font-weight: 700;
-  font-size: 0.6rem;
-  padding: 7px 10px;
-  line-height: 1;
-  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.5);
   border-radius: 999px;
+  padding: 4px;
 }
 
-.add-to-cart-btn:disabled {
+.back-stepper button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #2b1710;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.back-stepper button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.back-stepper .back-qty-value {
+  min-width: 1.2em;
+  text-align: center;
+  color: #fff;
+  font-weight: 700;
 }
 
 .drink-card img {
@@ -384,7 +402,7 @@ select {
   display: grid;
   grid-template-columns: 1fr auto auto auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .inventory-row .name {
@@ -409,8 +427,12 @@ select {
 }
 
 .inventory-row .inventory-remove {
-  font-size: 0.75rem;
-  padding: 6px 10px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
   color: #e4a0a0;
 }
 
