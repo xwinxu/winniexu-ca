@@ -42,14 +42,14 @@ export const DRINKS: Record<string, MenuItemDef> = {
     backImageUrl: "assets/drinks/grapefruit-back.png",
   },
   jasmine_sobacha: {
-    name: "Jasmine Sobacha",
+    name: "Tea-Ching",
     price: 6,
     section: "pairings",
     imageUrl: "assets/drinks/jasmine_sobacha.png",
     backImageUrl: "assets/drinks/jasmine_sobacha-back.png",
   },
   sesame_miso: {
-    name: "Sesame Miso",
+    name: "Open Sesame",
     price: 6,
     section: "pairings",
     imageUrl: "assets/drinks/sesame_miso.png",
