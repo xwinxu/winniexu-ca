@@ -42,6 +42,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       drinkName: drink.name,
       qty: item.qty,
       unitPrice: drink.price,
+      section: drink.section,
     };
   });
   const amount = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);

@@ -24,13 +24,57 @@
     <p class="sub">Confirm payments as they come in on Venmo, then run the drink queue.</p>
 
     <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Awaiting payment</h2>
+      <p class="sub" style="margin:0 0 8px">Match the order number in the Venmo note, then confirm.</p>
+      <ul class="queue-list" id="awaiting-list"></ul>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Preparing</h2>
+      <ul class="queue-list" id="preparing-list"></ul>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Live drink workload</h2>
+      <p class="sub" style="margin:0 0 12px">
+        Drink units in paid orders currently being prepared. Ready orders are no longer counted.
+      </p>
+      <p class="sub" id="workload-total" style="margin:0 0 8px" aria-live="polite"></p>
+      <div
+        id="workload-chart"
+        class="workload-chart"
+        role="list"
+        aria-label="Current drink workload by menu item"
+      ></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Drink station queues</h2>
+      <p class="sub" style="margin:0 0 12px">
+        Each drink station is oldest-order-first. If your station is caught up, help the busiest one. Counts clear when
+        the whole order is marked ready.
+      </p>
+      <p class="sub" id="station-assist" style="margin:0 0 12px" aria-live="polite"></p>
+      <div id="station-queues" class="station-grid" role="list" aria-label="Drink station queues"></div>
+    </div>
+
+    <div class="card">
+      <div class="counter-heading">
+        <h2 style="margin:0;font-size:1.05rem">Ready for pickup</h2>
+        <span id="ready-count" class="counter-badge" aria-live="polite">0 orders</span>
+      </div>
+      <p class="sub" style="margin:0 0 12px">Check the order number against every drink before handing it over.</p>
+      <ul class="queue-list" id="ready-list"></ul>
+    </div>
+
+    <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
         <button type="button" id="reset-all" style="color:#e4a0a0;font-size:0.8rem">Reset all orders</button>
       </div>
       <p class="sub" style="margin:0 0 8px">
-        Set total units available per item. "Reset" clears just that item's limit; "Reset all orders" wipes all
-        order history (use before the event / to clear test data).
+        Set how many units are available now. Updating a limit adds or removes only the difference and keeps placed
+        orders counted. "Reset" clears just that item's limit; "Reset all orders" wipes all order history.
       </p>
       <div class="inventory-grid" id="inventory-grid"></div>
     </div>
@@ -50,22 +94,6 @@
       <input type="number" id="new-item-limit" min="0" placeholder="Initial limit (leave blank: not orderable yet)" />
       <button class="primary" id="new-item-submit">Add item</button>
       <p class="sub" id="new-item-error" style="color:#e4a0a0;margin:8px 0 0" hidden></p>
-    </div>
-
-    <div class="card">
-      <h2 style="margin:0 0 8px;font-size:1.05rem">Awaiting payment</h2>
-      <p class="sub" style="margin:0 0 8px">Match the order number in the Venmo note, then confirm.</p>
-      <ul class="queue-list" id="awaiting-list"></ul>
-    </div>
-
-    <div class="card">
-      <h2 style="margin:0 0 8px;font-size:1.05rem">Preparing</h2>
-      <ul class="queue-list" id="preparing-list"></ul>
-    </div>
-
-    <div class="card">
-      <h2 style="margin:0 0 8px;font-size:1.05rem">Ready for pickup</h2>
-      <ul class="queue-list" id="ready-list"></ul>
     </div>
 
     <div class="card">
@@ -121,7 +149,15 @@
         <div class="inventory-row">
           <span class="name">${stock.name}</span>
           <span class="remaining">${stock.remaining === null ? "no limit set" : `${stock.remaining} left`}</span>
-          <input type="number" min="0" data-key="${key}" placeholder="total" value="${stock.total ?? ""}" />
+          <input
+            type="number"
+            min="0"
+            step="1"
+            data-key="${key}"
+            aria-label="Set available amount for ${stock.name}"
+            placeholder="set left"
+            value="${stock.remaining ?? ""}"
+          />
           <button type="button" class="inventory-reset" data-key="${key}">Reset</button>
           ${
             stock.removable
@@ -133,12 +169,13 @@
         .join("");
     }
 
-    async function saveInventory(key, total) {
-      await fetch("/api/inventory", {
+    async function saveInventory(key, amount, field = "total") {
+      const response = await fetch("/api/inventory", {
         method: "POST",
         headers: { "content-type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ drink: key, total }),
+        body: JSON.stringify({ drink: key, [field]: amount }),
       });
+      if (!response.ok) throw new Error(`Inventory update failed (${response.status}).`);
     }
 
     document.getElementById("inventory-grid").addEventListener(
@@ -148,7 +185,15 @@
         if (!input) return;
         const total = parseInt(input.value, 10);
         if (Number.isNaN(total) || total < 0) return;
-        saveInventory(input.dataset.key, total).then(refresh);
+        input.disabled = true;
+        saveInventory(input.dataset.key, total, "remaining")
+          .then(refresh)
+          .catch((error) => {
+            alert(error instanceof Error ? error.message : "Inventory update failed.");
+          })
+          .finally(() => {
+            input.disabled = false;
+          });
       },
       true,
     );
@@ -277,6 +322,183 @@
         .join("");
     }
 
+    function renderReadyCounter(orders) {
+      const list = document.getElementById("ready-list");
+      document.getElementById("ready-count").textContent = `${orders.length} order${orders.length === 1 ? "" : "s"}`;
+      list.replaceChildren();
+
+      if (orders.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "No orders waiting at the counter.";
+        list.append(empty);
+        return;
+      }
+
+      for (const order of orders) {
+        const row = document.createElement("li");
+        row.className = "counter-order";
+
+        const ticket = document.createElement("div");
+        ticket.className = "counter-ticket";
+        const number = document.createElement("span");
+        number.className = "counter-number";
+        number.textContent = `#${order.number}`;
+        const customer = document.createElement("span");
+        customer.className = "counter-customer";
+        customer.textContent = order.customerName;
+        ticket.append(number, customer);
+
+        const items = document.createElement("ul");
+        items.className = "counter-items";
+        for (const item of order.items) {
+          const line = document.createElement("li");
+          const drink = document.createElement("span");
+          drink.textContent = item.drinkName;
+          const quantity = document.createElement("strong");
+          quantity.textContent = `×${item.qty}`;
+          line.append(drink, quantity);
+          items.append(line);
+        }
+
+        const action = document.createElement("button");
+        action.textContent = "Picked up";
+        action.dataset.id = order.id;
+        action.dataset.action = "advance";
+        row.append(ticket, items, action);
+        list.append(row);
+      }
+    }
+
+    function renderWorkload(preparing, inventory) {
+      const drinks = Object.entries(inventory).filter(([, item]) => item.section === "drinks");
+      const counts = Object.fromEntries(drinks.map(([key]) => [key, 0]));
+      for (const order of preparing) {
+        for (const item of order.items) {
+          if (item.drinkKey in counts) counts[item.drinkKey] += item.qty;
+        }
+      }
+
+      const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+      document.getElementById("workload-total").textContent = `${total} drink${total === 1 ? "" : "s"} in prep`;
+
+      const chart = document.getElementById("workload-chart");
+      chart.replaceChildren();
+      if (drinks.length === 0) {
+        chart.textContent = "No drink items on the menu.";
+        chart.classList.add("empty");
+        return;
+      }
+      chart.classList.remove("empty");
+
+      const maxCount = Math.max(1, ...Object.values(counts));
+      for (const [key, item] of drinks) {
+        const row = document.createElement("div");
+        row.className = "workload-row";
+        row.setAttribute("role", "listitem");
+
+        const name = document.createElement("span");
+        name.className = "workload-name";
+        name.textContent = item.name;
+
+        const track = document.createElement("span");
+        track.className = "workload-track";
+        track.setAttribute("aria-hidden", "true");
+        const bar = document.createElement("span");
+        bar.className = "workload-bar";
+        bar.style.width = `${(counts[key] / maxCount) * 100}%`;
+        track.append(bar);
+
+        const count = document.createElement("span");
+        count.className = "workload-count";
+        count.textContent = String(counts[key]);
+        count.setAttribute("aria-label", `${counts[key]} in preparation`);
+
+        row.append(name, track, count);
+        chart.append(row);
+      }
+    }
+
+    function renderDrinkStations(preparing, inventory) {
+      const stations = Object.entries(inventory)
+        .filter(([, item]) => item.section === "drinks")
+        .map(([key, item]) => {
+          const orders = preparing
+            .flatMap((order) => {
+              const drink = order.items.find((line) => line.drinkKey === key);
+              return drink ? [{ order, qty: drink.qty }] : [];
+            })
+            .sort((a, b) => a.order.createdAt - b.order.createdAt || a.order.number - b.order.number);
+          return {
+            key,
+            name: item.name,
+            orders,
+            count: orders.reduce((sum, entry) => sum + entry.qty, 0),
+          };
+        });
+
+      const busyStations = stations
+        .filter((station) => station.count > 0)
+        .sort(
+          (a, b) =>
+            b.count - a.count ||
+            a.orders[0].order.createdAt - b.orders[0].order.createdAt ||
+            a.name.localeCompare(b.name),
+        );
+      const assist = document.getElementById("station-assist");
+      if (busyStations.length === 0) {
+        assist.textContent = "All drink stations are caught up.";
+      } else {
+        const station = busyStations[0];
+        assist.textContent = `If your station is clear, help ${station.name}: ${station.count} drinks across ${station.orders.length} orders.`;
+      }
+
+      const container = document.getElementById("station-queues");
+      container.replaceChildren();
+      if (stations.length === 0) {
+        container.textContent = "No drink stations on the menu.";
+        container.classList.add("empty");
+        return;
+      }
+      container.classList.remove("empty");
+
+      for (const station of stations) {
+        const card = document.createElement("section");
+        card.className = "station-card";
+        card.setAttribute("role", "listitem");
+
+        const heading = document.createElement("div");
+        heading.className = "station-heading";
+        const name = document.createElement("h3");
+        name.textContent = station.name;
+        const total = document.createElement("span");
+        total.textContent = `${station.count} drink${station.count === 1 ? "" : "s"}`;
+        heading.append(name, total);
+        card.append(heading);
+
+        if (station.orders.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "station-empty";
+          empty.textContent = "Caught up";
+          card.append(empty);
+        } else {
+          const list = document.createElement("ol");
+          list.className = "station-orders";
+          for (const { order, qty } of station.orders) {
+            const row = document.createElement("li");
+            const ticket = document.createElement("span");
+            ticket.textContent = `#${order.number} · ${order.customerName}`;
+            const quantity = document.createElement("strong");
+            quantity.textContent = `×${qty}`;
+            row.append(ticket, quantity);
+            list.append(row);
+          }
+          card.append(list);
+        }
+        container.append(card);
+      }
+    }
+
     function formatDuration(ms) {
       if (ms === null || ms === undefined) return "—";
       const mins = ms / 60000;
@@ -368,7 +590,9 @@
           const { awaitingPayment, preparing, ready } = await queueRes.json();
           renderList(document.getElementById("awaiting-list"), awaitingPayment, "Confirm paid", "confirm-payment");
           renderList(document.getElementById("preparing-list"), preparing, "Mark ready", "advance", inventory);
-          renderList(document.getElementById("ready-list"), ready, "Picked up", "advance");
+          renderReadyCounter(ready);
+          renderWorkload(preparing, inventory);
+          renderDrinkStations(preparing, inventory);
         }
 
         if (statsRes.ok) {
@@ -385,9 +609,12 @@
       btn.disabled = true;
       const { id, action } = btn.dataset;
       try {
-        await fetch(`/api/orders/${id}/${action}`, { method: "POST", headers: authHeaders() });
+        const response = await fetch(`/api/orders/${id}/${action}`, { method: "POST", headers: authHeaders() });
+        if (!response.ok) throw new Error(`Queue update failed (${response.status}).`);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Queue update failed.");
       } finally {
-        refresh();
+        await refresh();
       }
     });
 

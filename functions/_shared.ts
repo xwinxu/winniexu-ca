@@ -62,6 +62,7 @@ export interface OrderItem {
   drinkName: string;
   qty: number;
   unitPrice: number;
+  section?: MenuSection;
 }
 
 export interface Order {

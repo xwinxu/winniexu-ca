@@ -358,12 +358,12 @@
 
     function renderQueued(order) {
       app.innerHTML = `
-        <h1>You're in the queue!</h1>
+        <h1>Patience is wisdom steeping</h1>
         <p class="sub">${itemsSummary(order)} for ${order.customerName}</p>
         <div class="card" style="text-align:center">
-          <p class="sub">Your number</p>
+          <p class="sub" id="order-status-label">Preparing</p>
           <div class="number">#${order.number}</div>
-          <p class="sub" id="live-status">Being prepared...</p>
+          <p class="sub" id="live-status" aria-live="polite">[Counting the disciples ahead of your brew...]</p>
         </div>
         <button id="new-order" style="width:100%;margin-top:8px">Place another order</button>
       `;
@@ -387,13 +387,31 @@
           }
           if (alreadyQueued) {
             const liveStatus = document.getElementById("live-status");
+            const orderStatusLabel = document.getElementById("order-status-label");
             if (liveStatus) {
-              liveStatus.textContent =
-                order.status === "ready"
-                  ? "Ready for pickup!"
-                  : order.status === "picked_up"
-                  ? "Picked up. Thanks!"
-                  : "Being prepared...";
+              if (order.status === "ready") {
+                if (orderStatusLabel) orderStatusLabel.textContent = "Ready for pickup";
+                liveStatus.textContent = "Ready for pickup!";
+              } else if (order.status === "picked_up") {
+                const heading = app.querySelector("h1");
+                if (heading) heading.textContent = "One less lesson in patience";
+                if (orderStatusLabel) orderStatusLabel.textContent = "Picked up";
+                liveStatus.textContent = "Thanks!";
+              } else if (
+                order.status === "preparing" &&
+                Number.isInteger(order.ordersAhead) &&
+                Number.isInteger(order.drinksAhead)
+              ) {
+                if (orderStatusLabel) orderStatusLabel.textContent = "Preparing";
+                const orders = order.ordersAhead;
+                const drinks = order.drinksAhead;
+                const discipleCount = `${orders} disciple${orders === 1 ? "" : "s"}`;
+                const drinkCount = `${drinks} drink${drinks === 1 ? "" : "s"}`;
+                liveStatus.textContent = `[${discipleCount} and ${drinkCount} ahead of your brew]`;
+              } else {
+                if (orderStatusLabel) orderStatusLabel.textContent = "Preparing";
+                liveStatus.textContent = "[Counting the disciples ahead of your brew...]";
+              }
             }
           }
         }
