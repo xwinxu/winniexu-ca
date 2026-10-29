@@ -390,26 +390,35 @@
             const orderStatusLabel = document.getElementById("order-status-label");
             if (liveStatus) {
               if (order.status === "ready") {
-                if (orderStatusLabel) orderStatusLabel.textContent = "Ready for pickup";
+                if (orderStatusLabel) orderStatusLabel.hidden = true;
                 liveStatus.textContent = "Ready for pickup!";
               } else if (order.status === "picked_up") {
                 const heading = app.querySelector("h1");
                 if (heading) heading.textContent = "One less lesson in patience";
-                if (orderStatusLabel) orderStatusLabel.textContent = "Picked up";
+                if (orderStatusLabel) {
+                  orderStatusLabel.hidden = false;
+                  orderStatusLabel.textContent = "Picked up";
+                }
                 liveStatus.textContent = "Thanks!";
               } else if (
                 order.status === "preparing" &&
                 Number.isInteger(order.ordersAhead) &&
                 Number.isInteger(order.drinksAhead)
               ) {
-                if (orderStatusLabel) orderStatusLabel.textContent = "Preparing";
+                if (orderStatusLabel) {
+                  orderStatusLabel.hidden = false;
+                  orderStatusLabel.textContent = "Preparing";
+                }
                 const orders = order.ordersAhead;
                 const drinks = order.drinksAhead;
                 const discipleCount = `${orders} disciple${orders === 1 ? "" : "s"}`;
                 const drinkCount = `${drinks} drink${drinks === 1 ? "" : "s"}`;
                 liveStatus.textContent = `[${discipleCount} and ${drinkCount} ahead of your brew]`;
               } else {
-                if (orderStatusLabel) orderStatusLabel.textContent = "Preparing";
+                if (orderStatusLabel) {
+                  orderStatusLabel.hidden = false;
+                  orderStatusLabel.textContent = "Preparing";
+                }
                 liveStatus.textContent = "[Counting the disciples ahead of your brew...]";
               }
             }
