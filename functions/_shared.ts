@@ -29,7 +29,7 @@ export const DRINKS: Record<string, MenuItemDef> = {
   },
   banana: {
     name: "Bananocano",
-    price: 6,
+    price: 7,
     section: "drinks",
     imageUrl: "assets/drinks/banana.png",
     backImageUrl: "assets/drinks/banana-back.png",
@@ -43,14 +43,14 @@ export const DRINKS: Record<string, MenuItemDef> = {
   },
   jasmine_sobacha: {
     name: "Tea-Ching",
-    price: 6,
+    price: 8,
     section: "pairings",
     imageUrl: "assets/drinks/jasmine_sobacha.png",
     backImageUrl: "assets/drinks/jasmine_sobacha-back.png",
   },
   sesame_miso: {
     name: "Open Sesame",
-    price: 6,
+    price: 8,
     section: "pairings",
     imageUrl: "assets/drinks/sesame_miso.png",
     backImageUrl: "assets/drinks/sesame_miso-back.png",
