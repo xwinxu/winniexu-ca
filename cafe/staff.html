@@ -68,15 +68,39 @@
     </div>
 
     <div class="card">
+      <div class="counter-heading">
+        <h2 style="margin:0;font-size:1.05rem">Set aside (not picked up yet)</h2>
+        <span id="set-aside-count" class="counter-badge" aria-live="polite">0 orders</span>
+      </div>
+      <p class="sub" style="margin:0 0 12px">
+        Orders nobody came back for. Move one back to "Ready" once the customer shows up.
+      </p>
+      <ul class="queue-list" id="set-aside-list"></ul>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Drink stations</h2>
+      <p class="sub" style="margin:0 0 12px">Give each drink person their own page with just their queue.</p>
+      <div id="station-links" class="station-links"></div>
+    </div>
+
+    <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h2 style="margin:0 0 8px;font-size:1.05rem">Inventory (staff only)</h2>
         <button type="button" id="reset-all" style="color:#e4a0a0;font-size:0.8rem">Reset all orders</button>
       </div>
       <p class="sub" style="margin:0 0 8px">
-        Set how many units are available now. Updating a limit adds or removes only the difference and keeps placed
-        orders counted. "Reset" clears just that item's limit; "Reset all orders" wipes all order history.
+        "Limit" is the total you set for the day and stays fixed. "Remaining" ticks down automatically as orders come
+        in &mdash; you don't need to update it yourself. "Reset" clears just that item's limit; "Reset all orders"
+        wipes all order history.
       </p>
       <div class="inventory-grid" id="inventory-grid"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:1.05rem">Recent orders</h2>
+      <p class="sub" style="margin:0 0 8px">All orders, newest first &mdash; including picked up and set aside.</p>
+      <ul class="queue-list scrollable" id="recent-list"></ul>
     </div>
 
     <div class="card">
@@ -148,16 +172,19 @@
           return `
         <div class="inventory-row">
           <span class="name">${stock.name}</span>
+          <label class="inventory-limit">
+            <span class="inventory-limit-label">Limit</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              data-key="${key}"
+              aria-label="Set total limit for ${stock.name}"
+              placeholder="set limit"
+              value="${stock.total ?? ""}"
+            />
+          </label>
           <span class="remaining">${stock.remaining === null ? "no limit set" : `${stock.remaining} left`}</span>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            data-key="${key}"
-            aria-label="Set available amount for ${stock.name}"
-            placeholder="set left"
-            value="${stock.remaining ?? ""}"
-          />
           <button type="button" class="inventory-reset" data-key="${key}">Reset</button>
           ${
             stock.removable
@@ -186,7 +213,7 @@
         const total = parseInt(input.value, 10);
         if (Number.isNaN(total) || total < 0) return;
         input.disabled = true;
-        saveInventory(input.dataset.key, total, "remaining")
+        saveInventory(input.dataset.key, total, "total")
           .then(refresh)
           .catch((error) => {
             alert(error instanceof Error ? error.message : "Inventory update failed.");
@@ -286,39 +313,65 @@
       refresh();
     });
 
-    // "1.0.2.0" = quantities of each menu item, in the same order as the inventory list
-    function drinkCode(order, inventory) {
-      return Object.keys(inventory)
-        .map((key) => {
-          const item = order.items.find((i) => i.drinkKey === key);
-          return item ? item.qty : 0;
-        })
-        .join(".");
+    function itemsText(order) {
+      return order.items.map((i) => `${i.qty}x ${i.drinkName}`).join(", ");
     }
 
-    function renderList(el, orders, actionLabel, action, inventory) {
+    function renderList(el, orders, actions) {
       if (orders.length === 0) {
         el.innerHTML = `<li class="empty">Nothing here</li>`;
         return;
       }
-      const useDrinkCode = Boolean(inventory);
       el.innerHTML = orders
         .map((o) => {
-          const label = useDrinkCode
-            ? `${drinkCode(o, inventory)} ${o.customerName}`
-            : `#${o.number} &mdash; ${o.items.map((i) => `${i.qty}x ${i.drinkName}`).join(", ")}`;
-          const sub = useDrinkCode
-            ? `#${o.number} &middot; $${o.amount.toFixed(2)}`
-            : `${o.customerName} &middot; $${o.amount.toFixed(2)}`;
+          const label = `#${o.number} &mdash; ${o.customerName}`;
+          const sub = `${itemsText(o)} &middot; $${o.amount.toFixed(2)}`;
+          const buttons = actions
+            .map((a) => `<button data-id="${o.id}" data-action="${a.action}">${a.label}</button>`)
+            .join("");
           return `
         <li>
           <div class="meta">
             <span class="n">${label}</span>
             <span class="d">${sub}</span>
           </div>
-          <button data-id="${o.id}" data-action="${action}">${actionLabel}</button>
+          <div class="actions">${buttons}</div>
         </li>`;
         })
+        .join("");
+    }
+
+    function renderRecent(orders) {
+      const el = document.getElementById("recent-list");
+      if (orders.length === 0) {
+        el.innerHTML = `<li class="empty">No orders yet</li>`;
+        return;
+      }
+      const statusLabel = { picked_up: "Picked up", set_aside: "Set aside" };
+      el.innerHTML = orders
+        .map((o) => {
+          const label = `#${o.number} &mdash; ${o.customerName}`;
+          const sub = `${itemsText(o)} &middot; $${o.amount.toFixed(2)} &middot; ${statusLabel[o.status] || o.status}`;
+          return `
+        <li>
+          <div class="meta">
+            <span class="n">${label}</span>
+            <span class="d">${sub}</span>
+          </div>
+        </li>`;
+        })
+        .join("");
+    }
+
+    function renderStationLinks(inventory) {
+      const el = document.getElementById("station-links");
+      const drinks = Object.entries(inventory).filter(([, item]) => item.section === "drinks");
+      if (drinks.length === 0) {
+        el.textContent = "No drink items on the menu.";
+        return;
+      }
+      el.innerHTML = drinks
+        .map(([key, item]) => `<a href="station.html?drink=${encodeURIComponent(key)}">${item.name}</a>`)
         .join("");
     }
 
@@ -361,11 +414,18 @@
           items.append(line);
         }
 
-        const action = document.createElement("button");
-        action.textContent = "Picked up";
-        action.dataset.id = order.id;
-        action.dataset.action = "advance";
-        row.append(ticket, items, action);
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const pickedUp = document.createElement("button");
+        pickedUp.textContent = "Picked up";
+        pickedUp.dataset.id = order.id;
+        pickedUp.dataset.action = "advance";
+        const setAside = document.createElement("button");
+        setAside.textContent = "Set aside";
+        setAside.dataset.id = order.id;
+        setAside.dataset.action = "set-aside";
+        actions.append(pickedUp, setAside);
+        row.append(ticket, items, actions);
         list.append(row);
       }
     }
@@ -572,10 +632,11 @@
 
     async function refresh() {
       try {
-        const [queueRes, inventoryRes, statsRes] = await Promise.all([
+        const [queueRes, inventoryRes, statsRes, recentRes] = await Promise.all([
           fetch("/api/queue"),
           fetch("/api/inventory"),
           fetch("/api/stats", { headers: authHeaders() }),
+          fetch("/api/orders/all", { headers: authHeaders() }),
         ]);
 
         let inventory = null;
@@ -584,19 +645,35 @@
         if (inventoryRes.ok) {
           inventory = await inventoryRes.json();
           if (!editingInput) renderInventory(inventory);
+          renderStationLinks(inventory);
         }
 
         if (queueRes.ok && inventory) {
-          const { awaitingPayment, preparing, ready } = await queueRes.json();
-          renderList(document.getElementById("awaiting-list"), awaitingPayment, "Confirm paid", "confirm-payment");
-          renderList(document.getElementById("preparing-list"), preparing, "Mark ready", "advance", inventory);
+          const { awaitingPayment, preparing, ready, setAside } = await queueRes.json();
+          renderList(document.getElementById("awaiting-list"), awaitingPayment, [
+            { action: "confirm-payment", label: "Confirm paid" },
+          ]);
+          renderList(document.getElementById("preparing-list"), preparing, [
+            { action: "advance", label: "Mark ready" },
+          ]);
           renderReadyCounter(ready);
+          renderList(document.getElementById("set-aside-list"), setAside, [
+            { action: "back-to-ready", label: "Back to ready" },
+          ]);
+          document.getElementById("set-aside-count").textContent = `${setAside.length} order${
+            setAside.length === 1 ? "" : "s"
+          }`;
           renderWorkload(preparing, inventory);
           renderDrinkStations(preparing, inventory);
         }
 
         if (statsRes.ok) {
           renderStats(await statsRes.json());
+        }
+
+        if (recentRes.ok) {
+          const all = await recentRes.json();
+          renderRecent(all.filter((o) => o.status === "picked_up" || o.status === "set_aside").slice(0, 50));
         }
       } catch (_) {
         // ignore transient network errors

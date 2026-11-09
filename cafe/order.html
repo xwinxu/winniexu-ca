@@ -365,6 +365,9 @@
           <div class="number">#${order.number}</div>
           <p class="sub" id="live-status" aria-live="polite">[Counting the disciples ahead of your brew...]</p>
         </div>
+        <p class="sub" id="keep-open-note" style="text-align:center;margin-top:10px">
+          Keep this page open &mdash; it'll update here the moment your order is ready for pickup.
+        </p>
         <button id="new-order" style="width:100%;margin-top:8px">Place another order</button>
       `;
       document.getElementById("new-order").addEventListener("click", () => {
@@ -389,9 +392,16 @@
             const liveStatus = document.getElementById("live-status");
             const orderStatusLabel = document.getElementById("order-status-label");
             if (liveStatus) {
+              const keepOpenNote = document.getElementById("keep-open-note");
               if (order.status === "ready") {
                 if (orderStatusLabel) orderStatusLabel.hidden = true;
                 liveStatus.textContent = "Ready for pickup!";
+                if (keepOpenNote) keepOpenNote.textContent = "Come grab it at the counter whenever you're ready!";
+              } else if (order.status === "set_aside") {
+                if (orderStatusLabel) orderStatusLabel.hidden = true;
+                liveStatus.textContent = "Ready and waiting for you!";
+                if (keepOpenNote)
+                  keepOpenNote.textContent = "We've set your order aside at the counter — come grab it whenever you're ready!";
               } else if (order.status === "picked_up") {
                 const heading = app.querySelector("h1");
                 if (heading) heading.textContent = "One less lesson in patience";
@@ -400,6 +410,7 @@
                   orderStatusLabel.textContent = "Picked up";
                 }
                 liveStatus.textContent = "Thanks!";
+                if (keepOpenNote) keepOpenNote.hidden = true;
               } else if (
                 order.status === "preparing" &&
                 Number.isInteger(order.ordersAhead) &&

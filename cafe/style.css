@@ -468,6 +468,36 @@ select {
   font-size: 0.85rem;
 }
 
+.queue-list .actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.queue-list.scrollable {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.station-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.station-links a {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 @media (max-width: 520px) {
   .queue-list .counter-order {
     grid-template-columns: 1fr auto;
@@ -511,6 +541,18 @@ select {
 .inventory-row .remaining {
   color: var(--muted);
   font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.inventory-limit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inventory-limit-label {
+  font-size: 0.72rem;
+  color: var(--muted);
   white-space: nowrap;
 }
 

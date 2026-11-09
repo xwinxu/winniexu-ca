@@ -10,5 +10,6 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     awaitingPayment: byStatus("awaiting_payment"),
     preparing: byStatus("preparing"),
     ready: byStatus("ready"),
+    setAside: byStatus("set_aside"),
   });
 };

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Station</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="brand">
+    <img src="assets/logo-mark.png" alt="" />
+    <span>Confucius Says</span>
+  </div>
+  <h1 id="station-heading">Drink station</h1>
+
+  <div class="card" id="gate">
+    <p class="sub" style="margin:0 0 8px">Enter the staff password to continue.</p>
+    <input type="password" id="gate-password" placeholder="Password" />
+    <button class="primary" id="gate-submit">Enter</button>
+    <p class="sub" id="gate-error" style="color:#e4a0a0;margin:8px 0 0" hidden>Wrong password, try again.</p>
+  </div>
+
+  <div id="station-content" hidden>
+    <p class="sub" id="station-sub">Oldest order first. This counts clear once the whole order is marked ready.</p>
+    <div class="card">
+      <div class="counter-heading">
+        <h2 style="margin:0;font-size:1.05rem" id="station-name">&nbsp;</h2>
+        <span id="station-count" class="counter-badge" aria-live="polite">0 drinks</span>
+      </div>
+      <ol class="queue-list" id="station-orders"></ol>
+    </div>
+    <p class="sub"><a href="staff.html">&larr; Back to full staff view</a></p>
+  </div>
+
+  <script>
+    const STAFF_PASSWORD = "slaytea";
+    const STAFF_TOKEN_KEY = "cafe_staff_token";
+    const params = new URLSearchParams(location.search);
+    const drinkKey = params.get("drink");
+
+    function authHeaders() {
+      return { "x-staff-password": sessionStorage.getItem(STAFF_TOKEN_KEY) || "" };
+    }
+
+    function showStationContent() {
+      document.getElementById("gate").hidden = true;
+      document.getElementById("station-content").hidden = false;
+      refresh();
+      setInterval(refresh, 3000);
+    }
+
+    document.getElementById("gate-submit").addEventListener("click", () => {
+      const input = document.getElementById("gate-password");
+      if (input.value === STAFF_PASSWORD) {
+        sessionStorage.setItem(STAFF_TOKEN_KEY, STAFF_PASSWORD);
+        showStationContent();
+      } else {
+        document.getElementById("gate-error").hidden = false;
+      }
+    });
+
+    document.getElementById("gate-password").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("gate-submit").click();
+    });
+
+    async function refresh() {
+      try {
+        const [queueRes, inventoryRes] = await Promise.all([fetch("/api/queue"), fetch("/api/inventory")]);
+        if (!queueRes.ok || !inventoryRes.ok) return;
+        const { preparing } = await queueRes.json();
+        const inventory = await inventoryRes.json();
+
+        const item = drinkKey && inventory[drinkKey];
+        const heading = document.getElementById("station-heading");
+        const name = document.getElementById("station-name");
+        if (item) {
+          heading.textContent = item.name;
+          name.textContent = item.name;
+        } else {
+          heading.textContent = "Pick a station";
+          name.textContent = "No drink selected";
+        }
+
+        const list = document.getElementById("station-orders");
+        list.innerHTML = "";
+
+        if (!item) {
+          const drinks = Object.entries(inventory).filter(([, i]) => i.section === "drinks");
+          document.getElementById("station-count").textContent = "";
+          list.innerHTML = drinks
+            .map(
+              ([key, i]) =>
+                `<li><a href="station.html?drink=${encodeURIComponent(key)}" style="color:var(--accent);font-weight:700">${i.name}</a></li>`,
+            )
+            .join("");
+          return;
+        }
+
+        const orders = preparing
+          .flatMap((order) => {
+            const line = order.items.find((i) => i.drinkKey === drinkKey);
+            return line ? [{ order, qty: line.qty }] : [];
+          })
+          .sort((a, b) => a.order.createdAt - b.order.createdAt || a.order.number - b.order.number);
+
+        const total = orders.reduce((sum, o) => sum + o.qty, 0);
+        document.getElementById("station-count").textContent = `${total} drink${total === 1 ? "" : "s"}`;
+
+        if (orders.length === 0) {
+          list.innerHTML = `<li class="empty">Caught up &mdash; nothing queued for this drink.</li>`;
+          return;
+        }
+
+        for (const { order, qty } of orders) {
+          const li = document.createElement("li");
+          const meta = document.createElement("div");
+          meta.className = "meta";
+          const n = document.createElement("span");
+          n.className = "n";
+          n.textContent = `#${order.number} — ${order.customerName}`;
+          const d = document.createElement("span");
+          d.className = "d";
+          d.textContent = `${qty}x ${item.name}`;
+          meta.append(n, d);
+          li.append(meta);
+          list.append(li);
+        }
+      } catch (_) {
+        // ignore transient network errors
+      }
+    }
+
+    if (sessionStorage.getItem(STAFF_TOKEN_KEY) === STAFF_PASSWORD) {
+      showStationContent();
+    }
+  </script>
+</body>
+</html>
