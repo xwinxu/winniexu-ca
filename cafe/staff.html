@@ -68,17 +68,6 @@
     </div>
 
     <div class="card">
-      <div class="counter-heading">
-        <h2 style="margin:0;font-size:1.05rem">Set aside (not picked up yet)</h2>
-        <span id="set-aside-count" class="counter-badge" aria-live="polite">0 orders</span>
-      </div>
-      <p class="sub" style="margin:0 0 12px">
-        Orders nobody came back for. Move one back to "Ready" once the customer shows up.
-      </p>
-      <ul class="queue-list" id="set-aside-list"></ul>
-    </div>
-
-    <div class="card">
       <h2 style="margin:0 0 8px;font-size:1.05rem">Drink stations</h2>
       <p class="sub" style="margin:0 0 12px">Give each drink person their own page with just their queue.</p>
       <div id="station-links" class="station-links"></div>
@@ -99,7 +88,7 @@
 
     <div class="card">
       <h2 style="margin:0 0 8px;font-size:1.05rem">Recent orders</h2>
-      <p class="sub" style="margin:0 0 8px">All orders, newest first &mdash; including picked up and set aside.</p>
+      <p class="sub" style="margin:0 0 8px">All picked-up orders, newest first (tagged if they were set aside first).</p>
       <ul class="queue-list scrollable" id="recent-list"></ul>
     </div>
 
@@ -123,6 +112,13 @@
     <div class="card">
       <h2 style="margin:0 0 8px;font-size:1.05rem">Stats</h2>
       <div id="stats-summary" class="stats-summary"></div>
+      <div class="chart-toolbar">
+        <button type="button" class="chart-zoom-preset" data-window="900000">15m</button>
+        <button type="button" class="chart-zoom-preset" data-window="1800000">30m</button>
+        <button type="button" class="chart-zoom-preset" data-window="3600000">1h</button>
+        <button type="button" class="chart-zoom-preset" data-window="all">All</button>
+        <span class="chart-toolbar-hint">Scroll/pinch to zoom, drag to pan</span>
+      </div>
       <canvas id="stats-chart" width="640" height="220"></canvas>
       <div id="stats-legend" class="stats-legend"></div>
       <p class="sub" style="margin:16px 0 8px">Cloudflare plan reference (not live usage)</p>
@@ -347,11 +343,11 @@
         el.innerHTML = `<li class="empty">No orders yet</li>`;
         return;
       }
-      const statusLabel = { picked_up: "Picked up", set_aside: "Set aside" };
       el.innerHTML = orders
         .map((o) => {
           const label = `#${o.number} &mdash; ${o.customerName}`;
-          const sub = `${itemsText(o)} &middot; $${o.amount.toFixed(2)} &middot; ${statusLabel[o.status] || o.status}`;
+          const tag = o.setAsideForPickup ? "Set aside for pickup" : "Picked up";
+          const sub = `${itemsText(o)} &middot; $${o.amount.toFixed(2)} &middot; ${tag}`;
           return `
         <li>
           <div class="meta">
@@ -565,7 +561,41 @@
       return mins < 1 ? "<1 min" : `${mins.toFixed(1)} min`;
     }
 
+    // Chart zoom/pan state. View window is in data-space ms; null bounds mean
+    // "fit to all data" and get resolved against the latest stats each draw.
+    let latestStats = null;
+    let viewStart = null;
+    let viewEnd = null;
+
+    function fullRange() {
+      if (!latestStats) return null;
+      const items = Object.entries(latestStats.items).filter(([, s]) => s.series.length > 0);
+      const allPoints = items.flatMap(([, s]) => s.series);
+      if (allPoints.length === 0) return null;
+      return { minT: Math.min(...allPoints.map((p) => p.t)), maxT: Math.max(...allPoints.map((p) => p.t)) };
+    }
+
+    function clampView() {
+      const full = fullRange();
+      if (!full) return;
+      const span = Math.max(1000, viewEnd - viewStart);
+      if (span >= full.maxT - full.minT) {
+        viewStart = full.minT;
+        viewEnd = full.maxT;
+        return;
+      }
+      if (viewStart < full.minT) {
+        viewStart = full.minT;
+        viewEnd = viewStart + span;
+      }
+      if (viewEnd > full.maxT) {
+        viewEnd = full.maxT;
+        viewStart = viewEnd - span;
+      }
+    }
+
     function renderStats(stats) {
+      latestStats = stats;
       const summary = document.getElementById("stats-summary");
       summary.innerHTML = `
         <div class="stat-tile"><span class="stat-value">${stats.orderCount}</span><span class="stat-label">Orders placed</span></div>
@@ -574,7 +604,21 @@
         <div class="stat-tile"><span class="stat-value">${formatDuration(stats.avgPrepMs)}</span><span class="stat-label">Avg prep (paid→ready)</span></div>
       `;
 
-      const items = Object.entries(stats.items).filter(([, s]) => s.series.length > 0);
+      const full = fullRange();
+      if (viewStart === null || viewEnd === null) {
+        if (full) {
+          viewStart = full.minT;
+          viewEnd = full.maxT;
+        }
+      } else {
+        clampView();
+      }
+
+      drawChart();
+    }
+
+    function drawChart() {
+      const stats = latestStats;
       const canvas = document.getElementById("stats-chart");
       const ctx = canvas.getContext("2d");
       const w = canvas.width;
@@ -582,18 +626,20 @@
       ctx.clearRect(0, 0, w, h);
 
       const legend = document.getElementById("stats-legend");
+      if (!stats) return;
+      const items = Object.entries(stats.items).filter(([, s]) => s.series.length > 0);
       if (items.length === 0) {
         legend.innerHTML = `<p class="empty">No confirmed orders yet</p>`;
         return;
       }
 
-      const allPoints = items.flatMap(([, s]) => s.series);
-      const minT = Math.min(...allPoints.map((p) => p.t));
-      const maxT = Math.max(...allPoints.map((p) => p.t));
-      const maxCumulative = Math.max(...allPoints.map((p) => p.cumulative));
+      const minT = viewStart;
+      const maxT = viewEnd;
+      const visiblePoints = items.flatMap(([, s]) => s.series.filter((p) => p.t >= minT && p.t <= maxT));
+      const maxCumulative = Math.max(1, ...visiblePoints.map((p) => p.cumulative), ...items.map(() => 0));
       const padding = 24;
       const x = (t) => padding + ((t - minT) / Math.max(1, maxT - minT)) * (w - padding * 2);
-      const y = (c) => h - padding - (c / Math.max(1, maxCumulative)) * (h - padding * 2);
+      const y = (c) => h - padding - (c / maxCumulative) * (h - padding * 2);
 
       // axes
       ctx.strokeStyle = "#5c3a27";
@@ -609,9 +655,23 @@
         ctx.strokeStyle = color;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x(minT), y(0));
-        s.series.forEach((p) => ctx.lineTo(x(p.t), y(p.cumulative)));
-        ctx.stroke();
+        let started = false;
+        // carry the last known cumulative value into the visible window so a
+        // line that started sales before the zoomed-in range still draws flat
+        // from the left edge instead of appearing to start at 0.
+        let carry = 0;
+        for (const p of s.series) {
+          if (p.t < minT) {
+            carry = p.cumulative;
+            continue;
+          }
+          if (!started) {
+            ctx.moveTo(x(minT), y(carry));
+            started = true;
+          }
+          ctx.lineTo(x(p.t), y(p.cumulative));
+        }
+        if (started) ctx.stroke();
       });
 
       legend.innerHTML = items
@@ -629,6 +689,109 @@
         })
         .join("");
     }
+
+    document.querySelectorAll(".chart-zoom-preset").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const full = fullRange();
+        if (!full) return;
+        const windowAttr = btn.dataset.window;
+        if (windowAttr === "all") {
+          viewStart = full.minT;
+          viewEnd = full.maxT;
+        } else {
+          const windowMs = parseInt(windowAttr, 10);
+          viewEnd = full.maxT;
+          viewStart = Math.max(full.minT, full.maxT - windowMs);
+        }
+        drawChart();
+      });
+    });
+
+    (function setupChartZoomPan() {
+      const canvas = document.getElementById("stats-chart");
+
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          const full = fullRange();
+          if (!full || viewStart === null) return;
+          e.preventDefault();
+          const rect = canvas.getBoundingClientRect();
+          const px = (e.clientX - rect.left) / rect.width;
+          const anchor = viewStart + px * (viewEnd - viewStart);
+          const scale = e.deltaY > 0 ? 1.25 : 0.8;
+          let span = (viewEnd - viewStart) * scale;
+          const fullSpan = full.maxT - full.minT || 1;
+          span = Math.min(fullSpan, Math.max(fullSpan * 0.02, span));
+          viewStart = anchor - px * span;
+          viewEnd = viewStart + span;
+          clampView();
+          drawChart();
+        },
+        { passive: false },
+      );
+
+      let dragging = false;
+      let dragStartX = 0;
+      let dragStartView = null;
+      let pinchStartDist = null;
+      let pinchStartView = null;
+      const activeTouches = new Map();
+
+      canvas.addEventListener("pointerdown", (e) => {
+        if (viewStart === null) return;
+        canvas.setPointerCapture(e.pointerId);
+        activeTouches.set(e.pointerId, e.clientX);
+        if (activeTouches.size === 1) {
+          dragging = true;
+          dragStartX = e.clientX;
+          dragStartView = { start: viewStart, end: viewEnd };
+        } else if (activeTouches.size === 2) {
+          dragging = false;
+          const xs = [...activeTouches.values()];
+          pinchStartDist = Math.abs(xs[0] - xs[1]);
+          pinchStartView = { start: viewStart, end: viewEnd };
+        }
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        if (!activeTouches.has(e.pointerId)) return;
+        activeTouches.set(e.pointerId, e.clientX);
+        const full = fullRange();
+        if (!full) return;
+        const rect = canvas.getBoundingClientRect();
+
+        if (activeTouches.size === 2 && pinchStartDist) {
+          const xs = [...activeTouches.values()];
+          const dist = Math.abs(xs[0] - xs[1]) || 1;
+          const scale = pinchStartDist / dist;
+          const fullSpan = full.maxT - full.minT || 1;
+          const centerT = (pinchStartView.start + pinchStartView.end) / 2;
+          let span = (pinchStartView.end - pinchStartView.start) * scale;
+          span = Math.min(fullSpan, Math.max(fullSpan * 0.02, span));
+          viewStart = centerT - span / 2;
+          viewEnd = centerT + span / 2;
+          clampView();
+          drawChart();
+        } else if (dragging && dragStartView) {
+          const dx = e.clientX - dragStartX;
+          const msPerPx = (dragStartView.end - dragStartView.start) / rect.width;
+          const shift = -dx * msPerPx;
+          viewStart = dragStartView.start + shift;
+          viewEnd = dragStartView.end + shift;
+          clampView();
+          drawChart();
+        }
+      });
+
+      function endPointer(e) {
+        activeTouches.delete(e.pointerId);
+        if (activeTouches.size < 2) pinchStartDist = null;
+        if (activeTouches.size === 0) dragging = false;
+      }
+      canvas.addEventListener("pointerup", endPointer);
+      canvas.addEventListener("pointercancel", endPointer);
+    })();
 
     async function refresh() {
       try {
@@ -649,7 +812,7 @@
         }
 
         if (queueRes.ok && inventory) {
-          const { awaitingPayment, preparing, ready, setAside } = await queueRes.json();
+          const { awaitingPayment, preparing, ready } = await queueRes.json();
           renderList(document.getElementById("awaiting-list"), awaitingPayment, [
             { action: "confirm-payment", label: "Confirm paid" },
           ]);
@@ -657,12 +820,6 @@
             { action: "advance", label: "Mark ready" },
           ]);
           renderReadyCounter(ready);
-          renderList(document.getElementById("set-aside-list"), setAside, [
-            { action: "back-to-ready", label: "Back to ready" },
-          ]);
-          document.getElementById("set-aside-count").textContent = `${setAside.length} order${
-            setAside.length === 1 ? "" : "s"
-          }`;
           renderWorkload(preparing, inventory);
           renderDrinkStations(preparing, inventory);
         }
@@ -673,7 +830,7 @@
 
         if (recentRes.ok) {
           const all = await recentRes.json();
-          renderRecent(all.filter((o) => o.status === "picked_up" || o.status === "set_aside").slice(0, 50));
+          renderRecent(all.filter((o) => o.status === "picked_up").slice(0, 50));
         }
       } catch (_) {
         // ignore transient network errors

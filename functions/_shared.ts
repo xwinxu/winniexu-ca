@@ -71,12 +71,12 @@ export interface Order {
   items: OrderItem[];
   amount: number;
   customerName: string;
-  status: "awaiting_payment" | "preparing" | "ready" | "picked_up" | "set_aside";
+  status: "awaiting_payment" | "preparing" | "ready" | "picked_up";
   createdAt: number;
   paidAt?: number;
   readyAt?: number;
   picked_upAt?: number;
-  set_asideAt?: number;
+  setAsideForPickup?: boolean;
   [key: string]: unknown;
 }
 

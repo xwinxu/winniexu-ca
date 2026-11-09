@@ -604,6 +604,29 @@ select {
   color: var(--muted);
 }
 
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.chart-zoom-preset {
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+}
+
+.chart-toolbar-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
 #stats-chart {
   width: 100%;
   height: auto;
@@ -611,6 +634,8 @@ select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
+  touch-action: none;
+  cursor: grab;
 }
 
 .stats-legend {

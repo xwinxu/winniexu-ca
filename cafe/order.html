@@ -397,7 +397,7 @@
                 if (orderStatusLabel) orderStatusLabel.hidden = true;
                 liveStatus.textContent = "Ready for pickup!";
                 if (keepOpenNote) keepOpenNote.textContent = "Come grab it at the counter whenever you're ready!";
-              } else if (order.status === "set_aside") {
+              } else if (order.status === "picked_up" && order.setAsideForPickup) {
                 if (orderStatusLabel) orderStatusLabel.hidden = true;
                 liveStatus.textContent = "Ready and waiting for you!";
                 if (keepOpenNote)
